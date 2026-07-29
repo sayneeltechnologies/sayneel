@@ -126,7 +126,7 @@ bracketed identifiers (CIN, GSTIN, full registered address), before you rely on 
 
 ## 5. Owner actions before go-live
 
-1. Replace the phone number — `+91 00000 00000` in `assets/js/config.js` and the HTML files.
+1. Replace the phone number — `+91 8600 40 50 88` in `assets/js/config.js` and the HTML files.
 2. Add the full street address and postcode.
 3. Add your CIN and GSTIN in `terms.html` section 2.
 4. Replace `https://www.sayneeltech.in` with your live domain across `robots.txt`, `sitemap.xml`,

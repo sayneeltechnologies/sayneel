@@ -1,5 +1,5 @@
 # robots.txt — SayNeel Technologies Private Limited
-# Replace www.sayneel.com below if you deploy on a different domain.
+# Replace www.sayneeltech.in below if you deploy on a different domain.
 
 User-agent: *
 Allow: /

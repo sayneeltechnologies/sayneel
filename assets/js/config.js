@@ -8,29 +8,29 @@
    The HTML also contains the same values hard-coded as a no-JavaScript
    fallback. If you change a value here, run a find-and-replace across the
    .html files for the old value so both stay in sync. (Search for the string
-   you are replacing — e.g. "info@sayneel.com" — and replace all occurrences.)
+   you are replacing — e.g. "info@sayneeltech.in" — and replace all occurrences.)
    ========================================================================== */
 window.SAYNEEL = {
   /* --- Primary contact ------------------------------------------------- */
-  email: "info@sayneel.com",
-  phoneDisplay: "+91 00000 00000", // shown to visitors — replace with the real number
+  email: "info@sayneeltech.in",
+  phoneDisplay: "+91 8600 40 50 88", // shown to visitors — replace with the real number
   phoneDial: "+918600405088", // used in tel: links — digits and leading + only
 
   /* --- Department mailboxes -------------------------------------------- */
-  emailSales: "info@sayneel.com",
-  emailBalSaathi: "balsaathi@sayneel.com",
-  emailCareers: "careers@sayneel.com",
-  emailInvestors: "investors@sayneel.com",
-  emailSupport: "support@sayneel.com",
-  emailPrivacy: "privacy@sayneel.com",
-  emailLegal: "legal@sayneel.com",
+  emailSales: "info@sayneeltech.in",
+  emailBalSaathi: "balsaathi@sayneeltech.in",
+  emailCareers: "careers@sayneeltech.in",
+  emailInvestors: "investors@sayneeltech.in",
+  emailSupport: "support@sayneeltech.in",
+  emailPrivacy: "privacy@sayneeltech.in",
+  emailLegal: "legal@sayneeltech.in",
 
   /* --- Address & hours -------------------------------------------------- */
   addressLine1: "SayNeel Technologies Private Limited",
   addressLine2: "Pune, Maharashtra",
   addressLine3: "India",
-  hoursWeekday: "Monday to Friday · 9:30 AM – 6:30 PM IST",
-  hoursSaturday: "Saturday · 10:00 AM – 2:00 PM IST",
+  hoursWeekday: "Monday to Friday · 9:30 AM - 6:30 PM IST",
+  hoursSaturday: "Saturday · 10:00 AM - 2:00 PM IST",
   hoursSunday: "Sunday · Closed",
 
   /* --- Google Maps ------------------------------------------------------

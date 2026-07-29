@@ -29,7 +29,7 @@ These are the only items in the site that are deliberately generic. Everything e
 
 | #   | What                                                              | Where                                                                                                                                                                                                    |
 | --- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Phone number** — currently `+91 00000 00000`                    | `assets/js/config.js` (`phoneDisplay`, `phoneDial`) and search the `.html` files for `+91 00000 00000` and `tel:+918600405088`                                                                           |
+| 1   | **Phone number** — currently `+91 8600 40 50 88`                  | `assets/js/config.js` (`phoneDisplay`, `phoneDial`) and search the `.html` files for `+91 8600 40 50 88` and `tel:+918600405088`                                                                         |
 | 2   | **Street address and postcode**                                   | `assets/js/config.js` (`addressLine1–3`), `contact.html`                                                                                                                                                 |
 | 3   | **CIN and GSTIN**                                                 | `terms.html`, section 2                                                                                                                                                                                  |
 | 4   | **Domain** — currently `https://www.sayneeltech.in`               | `robots.txt`, `sitemap.xml`, `assets/js/config.js` (`baseUrl`), and the `canonical` / `og:url` / `og:image` / `twitter:image` tags in every `.html` file (find and replace `https://www.sayneeltech.in`) |
@@ -53,8 +53,8 @@ Change a value there and every page updates automatically on load.
 
 ```js
 window.SAYNEEL = {
-  email:        'info@sayneel.com',
-  phoneDisplay: '+91 00000 00000',
+  email:        'info@sayneeltech.in',
+  phoneDisplay: '+91 8600 40 50 88',
   phoneDial:    '+918600405088',
   ...
 };
@@ -65,7 +65,7 @@ visitor has JavaScript disabled. **After editing `config.js`, run a find-and-rep
 `.html` files** for the old value so both stay in sync. For example, to change the main email:
 
 ```bash
-grep -rl "info@sayneel.com" *.html | xargs sed -i 's/info@sayneel\.com/hello@sayneel.com/g'
+grep -rl "info@sayneeltech.in" *.html | xargs sed -i 's/info@sayneel\.com/hello@sayneeltech.in/g'
 ```
 
 ---
