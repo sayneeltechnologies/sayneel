@@ -27,8 +27,9 @@ window.SAYNEEL = {
 
   /* --- Address & hours -------------------------------------------------- */
   addressLine1: "SayNeel Technologies Private Limited",
-  addressLine2: "Pune, Maharashtra",
-  addressLine3: "India",
+  addressLine2:
+    "C2, FL-15, Shivtirth Nagar Society, S.No. 59/2A/1/4, Rahatani, Kalewadi, Pune City",
+  addressLine3: "Pune - 411017, Maharashtra, India",
   hoursWeekday: "Monday to Friday · 9:30 AM - 6:30 PM IST",
   hoursSaturday: "Saturday · 10:00 AM - 2:00 PM IST",
   hoursSunday: "Sunday · Closed",
@@ -38,8 +39,7 @@ window.SAYNEEL = {
      and mapLink with the shareable map URL. Leave mapEmbed empty ('') to
      keep the styled placeholder card shown on contact.html.               */
   mapEmbed: "",
-  mapLink:
-    "https://www.google.com/maps/search/?api=1&query=Pune%2C%20Maharashtra%2C%20India",
+  mapLink: "https://maps.app.goo.gl/8AQTzm5KrjC6Quh79",
 
   /* --- Social profiles (replace with your real handles) ----------------- */
   social: {
