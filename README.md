@@ -53,7 +53,7 @@ Change a value there and every page updates automatically on load.
 
 ```js
 window.SAYNEEL = {
-  email:        'info@sayneeltech.in',
+  email:        'contact@sayneeltech.in',
   phoneDisplay: '+91 8600 40 50 88',
   phoneDial:    '+918600405088',
   ...
@@ -65,7 +65,7 @@ visitor has JavaScript disabled. **After editing `config.js`, run a find-and-rep
 `.html` files** for the old value so both stay in sync. For example, to change the main email:
 
 ```bash
-grep -rl "info@sayneeltech.in" *.html | xargs sed -i 's/info@sayneel\.com/hello@sayneeltech.in/g'
+grep -rl "contact@sayneeltech.in" *.html | xargs sed -i 's/info@sayneel\.com/hello@sayneeltech.in/g'
 ```
 
 ---

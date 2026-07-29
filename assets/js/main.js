@@ -299,7 +299,7 @@
       }
       /* No backend is connected. Hand the subscription to the mail client so
          nothing is silently lost. Replace this with your ESP embed when ready. */
-      var to = CFG.email || "info@sayneeltech.in";
+      var to = CFG.email || "contact@sayneeltech.in";
       var subject = encodeURIComponent("Newsletter subscription");
       var body = encodeURIComponent(
         "Please add this address to the SayNeel mailing list: " + value,

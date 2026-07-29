@@ -8,16 +8,16 @@
    The HTML also contains the same values hard-coded as a no-JavaScript
    fallback. If you change a value here, run a find-and-replace across the
    .html files for the old value so both stay in sync. (Search for the string
-   you are replacing — e.g. "info@sayneeltech.in" — and replace all occurrences.)
+   you are replacing — e.g. "contact@sayneeltech.in" — and replace all occurrences.)
    ========================================================================== */
 window.SAYNEEL = {
   /* --- Primary contact ------------------------------------------------- */
-  email: "info@sayneeltech.in",
+  email: "contact@sayneeltech.in",
   phoneDisplay: "+91 8600 40 50 88", // shown to visitors — replace with the real number
   phoneDial: "+918600405088", // used in tel: links — digits and leading + only
 
   /* --- Department mailboxes -------------------------------------------- */
-  emailSales: "info@sayneeltech.in",
+  emailSales: "contact@sayneeltech.in",
   emailBalSaathi: "balsaathi@sayneeltech.in",
   emailCareers: "careers@sayneeltech.in",
   emailInvestors: "investors@sayneeltech.in",
