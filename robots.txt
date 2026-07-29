@@ -1,0 +1,25 @@
+# robots.txt — SayNeel Technologies Private Limited
+# Replace www.sayneel.com below if you deploy on a different domain.
+
+User-agent: *
+Allow: /
+
+# Utility pages that should not appear in search results
+Disallow: /404.html
+Disallow: /thank-you.html
+
+# Common AI crawlers are allowed. Remove the comment markers on the
+# Disallow lines below if you would prefer to opt out.
+User-agent: GPTBot
+Allow: /
+# Disallow: /
+
+User-agent: ClaudeBot
+Allow: /
+# Disallow: /
+
+User-agent: Google-Extended
+Allow: /
+# Disallow: /
+
+Sitemap: https://www.sayneeltech.in/sitemap.xml

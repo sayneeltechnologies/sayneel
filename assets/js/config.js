@@ -1,0 +1,55 @@
+/* ==========================================================================
+   SayNeel Technologies — Site configuration
+   --------------------------------------------------------------------------
+   EDIT THIS FILE ONLY to change contact details across the entire website.
+   Every page reads these values at runtime and updates the relevant links,
+   labels and mailto:/tel: targets.
+
+   The HTML also contains the same values hard-coded as a no-JavaScript
+   fallback. If you change a value here, run a find-and-replace across the
+   .html files for the old value so both stay in sync. (Search for the string
+   you are replacing — e.g. "info@sayneel.com" — and replace all occurrences.)
+   ========================================================================== */
+window.SAYNEEL = {
+  /* --- Primary contact ------------------------------------------------- */
+  email: "info@sayneel.com",
+  phoneDisplay: "+91 00000 00000", // shown to visitors — replace with the real number
+  phoneDial: "+918600405088", // used in tel: links — digits and leading + only
+
+  /* --- Department mailboxes -------------------------------------------- */
+  emailSales: "info@sayneel.com",
+  emailBalSaathi: "balsaathi@sayneel.com",
+  emailCareers: "careers@sayneel.com",
+  emailInvestors: "investors@sayneel.com",
+  emailSupport: "support@sayneel.com",
+  emailPrivacy: "privacy@sayneel.com",
+  emailLegal: "legal@sayneel.com",
+
+  /* --- Address & hours -------------------------------------------------- */
+  addressLine1: "SayNeel Technologies Private Limited",
+  addressLine2: "Pune, Maharashtra",
+  addressLine3: "India",
+  hoursWeekday: "Monday to Friday · 9:30 AM – 6:30 PM IST",
+  hoursSaturday: "Saturday · 10:00 AM – 2:00 PM IST",
+  hoursSunday: "Sunday · Closed",
+
+  /* --- Google Maps ------------------------------------------------------
+     Replace mapEmbed with the src of your Google Maps "Embed a map" iframe
+     and mapLink with the shareable map URL. Leave mapEmbed empty ('') to
+     keep the styled placeholder card shown on contact.html.               */
+  mapEmbed: "",
+  mapLink:
+    "https://www.google.com/maps/search/?api=1&query=Pune%2C%20Maharashtra%2C%20India",
+
+  /* --- Social profiles (replace with your real handles) ----------------- */
+  social: {
+    linkedin: "https://www.linkedin.com/company/sayneel",
+    x: "https://x.com/sayneel",
+    github: "https://github.com/sayneel",
+    youtube: "https://www.youtube.com/@sayneel",
+  },
+
+  /* --- Site --------------------------------------------------------------
+     baseUrl is used for canonical links in the SEO checklist only.        */
+  baseUrl: "https://www.sayneeltech.in",
+};

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="Placeholder for a workplace photograph">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E7D99"/><stop offset="55%" stop-color="#0EA5C6"/><stop offset="100%" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0v32" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="600" fill="url(#g)"/>
+  <rect width="900" height="600" fill="url(#grid)"/>
+  <circle cx="774" cy="108" r="252" fill="rgba(255,255,255,.10)"/>
+  <circle cx="108" cy="552" r="204" fill="rgba(255,255,255,.07)"/>
+  <g opacity=".5" fill="#fff"><circle cx="120" cy="170" r="26"/><rect x="86" y="204" width="68" height="70" rx="30"/><circle cx="210" cy="150" r="30"/><rect x="172" y="188" width="76" height="86" rx="34"/><circle cx="300" cy="176" r="24"/><rect x="270" y="208" width="60" height="66" rx="28"/></g>
+  <text x="450" y="300" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="69" font-weight="800" fill="#ffffff" letter-spacing="-0.5">Workplace photograph</text>
+  <text x="450" y="378" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="37" font-weight="500" fill="rgba(255,255,255,.78)">Replace with careers-culture.jpg</text>
+</svg>
