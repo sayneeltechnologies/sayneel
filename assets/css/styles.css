@@ -129,7 +129,13 @@ html[data-theme="dark"] .btn-primary{color:#0B1220}
   .nav-links,.nav-cta .btn-ghost{display:none}
   .hamburger{display:grid}
   .nav{height:60px;gap:14px}
-  .nav-cta .btn-primary{padding:9px 14px;font-size:13.5px}
+  .nav-cta .btn-primary{padding:9px 14px;font-size:13.5px;white-space:nowrap}
+}
+@media(max-width:420px){
+  .nav{gap:8px}
+  .nav-cta{gap:8px}
+  .icon-btn{width:34px;height:34px;font-size:14px}
+  .nav-cta .btn-primary{padding:8px 10px;font-size:11.5px}
 }
 .drawer{display:none;position:fixed;inset:60px 0 0 0;background:var(--surface);z-index:99;padding:22px;overflow:auto;-webkit-overflow-scrolling:touch}
 .drawer.open{display:block}
