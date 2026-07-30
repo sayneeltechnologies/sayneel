@@ -17,6 +17,8 @@
    09. Filter pills (portfolio / audience switches)
    10. Newsletter (front-end validation only — no backend)
    11. Contact detail injection from config.js
+   11B. Consultation booking form (book-consultation.html)
+   11C. Calendly placeholder embed
    12. Footer year
    13. External link hardening
    ========================================================================== */
@@ -385,6 +387,81 @@
       mapHost.innerHTML = "";
       mapHost.appendChild(frame);
     }
+  })();
+
+  /* 11B. CONSULTATION BOOKING FORM (book-consultation.html) -------------- */
+  (function consultationForm() {
+    var form = $("#consultForm");
+    var msg = $("#consultMsg");
+    if (!form || !msg) return;
+
+    var setMsg = function (text, ok) {
+      msg.textContent = text;
+      msg.className = "form-msg show " + (ok ? "ok" : "bad");
+    };
+
+    var fieldLabel = function (name) {
+      var labels = {
+        name: "Name",
+        company: "Company",
+        email: "Email",
+        phone: "Phone",
+        country: "Country",
+        city: "City",
+        service: "Service interested in",
+        description: "Project description",
+        budget: "Budget",
+        timeline: "Timeline",
+        date: "Preferred date",
+        time: "Preferred time",
+        meetingType: "Meeting type",
+      };
+      return labels[name] || name;
+    };
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+
+      var data = new FormData(form);
+      var lines = [];
+      data.forEach(function (value, key) {
+        if (String(value).trim()) lines.push(fieldLabel(key) + ": " + value);
+      });
+
+      var to = CFG.emailConsultation || CFG.email || "contact@sayneeltech.in";
+      var name = data.get("name") || "";
+      var company = data.get("company") || "";
+      var subject = encodeURIComponent(
+        "Consultation request — " + name + (company ? " (" + company + ")" : ""),
+      );
+      var body = encodeURIComponent(lines.join("\n"));
+
+      /* No backend is connected. Hand the request to the mail client so
+         nothing is silently lost. Replace this with a real endpoint or the
+         Calendly widget (see CFG.calendlyUrl) when ready. */
+      window.location.href = "mailto:" + to + "?subject=" + subject + "&body=" + body;
+      setMsg(
+        "Opening your email app with your consultation details. We reply within one business day.",
+        true,
+      );
+      form.reset();
+    });
+  })();
+
+  /* 11C. CALENDLY PLACEHOLDER --------------------------------------------- */
+  (function calendlyEmbed() {
+    var host = $("#calendlyHost");
+    var placeholder = $("#calendlyPlaceholder");
+    if (!host || !CFG.calendlyUrl) return;
+
+    var frame = document.createElement("iframe");
+    frame.src = CFG.calendlyUrl;
+    frame.title = "Schedule a consultation with SayNeel Technologies";
+    frame.loading = "lazy";
+    host.innerHTML = "";
+    host.appendChild(frame);
+    if (placeholder) placeholder.hidden = true;
   })();
 
   /* 12. FOOTER YEAR ------------------------------------------------------ */

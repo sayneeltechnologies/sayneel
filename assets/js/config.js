@@ -24,6 +24,15 @@ window.SAYNEEL = {
   emailSupport: "support@sayneeltech.in",
   emailPrivacy: "privacy@sayneeltech.in",
   emailLegal: "legal@sayneeltech.in",
+  emailConsultation: "contact@sayneeltech.in",
+
+  /* --- Calendly (book-consultation.html) --------------------------------
+     Replace calendlyUrl with your scheduling page URL, e.g.
+     "https://calendly.com/sayneeltech/consultation". The inline widget will
+     then replace the booking form's placeholder card automatically. Leave
+     empty ('') to keep the plain consultation form only. If you enable this,
+     also allow calendly.com in the CSP (see vercel.json and _headers).      */
+  calendlyUrl: "",
 
   /* --- Address & hours -------------------------------------------------- */
   addressLine1: "SayNeel Technologies Private Limited",

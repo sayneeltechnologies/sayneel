@@ -364,6 +364,43 @@ html[data-theme="dark"] .check.blue li::before{color:#0B1220}
 .nl-msg.ok{color:var(--success)}
 .nl-msg.bad{color:var(--danger)}
 
+/* 16B. CONSULTATION FORM (book-consultation.html) ======================== */
+.consult-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:40px;max-width:840px;margin:0 auto}
+@media(max-width:640px){.consult-form{padding:26px 20px}}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.field.span-2{grid-column:1 / -1}
+.field label{font-size:13.5px;font-weight:600;color:var(--ink)}
+.field label .opt{font-weight:500;color:var(--muted)}
+.field input,.field select,.field textarea{
+  width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);
+  background:var(--surface-alt);border:1.5px solid var(--border);border-radius:12px;
+  padding:12px 14px;transition:.15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.field textarea{resize:vertical;min-height:110px;line-height:1.6;font-family:inherit}
+.field select{cursor:pointer}
+
+.meet-type{display:flex;gap:10px;flex-wrap:wrap}
+.meet-opt{position:relative}
+.meet-opt input{position:absolute;opacity:0;width:1px;height:1px}
+.meet-opt span{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;border:1.5px solid var(--border);border-radius:99px;padding:10px 18px;color:var(--muted);background:var(--surface);cursor:pointer;transition:.15s}
+.meet-opt span:hover{border-color:var(--accent);color:var(--accent)}
+.meet-opt input:checked+span{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.meet-opt input:focus-visible+span{outline:2px solid var(--ring);outline-offset:2px}
+
+.form-msg{font-size:13.5px;font-weight:600;margin-top:6px;display:none}
+.form-msg.show{display:block}
+.form-msg.ok{color:var(--success)}
+.form-msg.bad{color:var(--danger)}
+
+.calendly-card{border:1px dashed var(--border);border-radius:var(--r-lg);padding:22px;text-align:center;background:var(--surface-alt);margin-bottom:28px}
+.calendly-card p{font-size:13.5px;color:var(--muted);margin-top:6px}
+.calendly-card code{font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px 6px}
+#calendlyHost:empty{display:none}
+#calendlyHost iframe{width:100%;min-height:680px;border:0;border-radius:var(--r-lg)}
+
 /* 17. FOOTER ============================================================= */
 footer{background:var(--surface-alt);border-top:1px solid var(--border);padding:64px 0 30px;margin-top:40px}
 .foot-top{display:grid;grid-template-columns:1.5fr 2.5fr;gap:44px;align-items:start}
