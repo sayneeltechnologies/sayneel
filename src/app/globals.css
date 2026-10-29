@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Portal-specific custom styles */
+:root {
+  --portal-primary: #1B3A8F;
+  --portal-secondary: #0F2459;
+}
