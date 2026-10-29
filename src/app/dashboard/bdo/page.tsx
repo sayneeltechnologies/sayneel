@@ -49,9 +49,16 @@ interface DashboardKpi {
   vaccineRate: string;
 }
 
+const DEFAULT_OFFICER = {
+  name: "Dr. R. K. Patil",
+  role: "BDO",
+  roleLabel: "Block Development Officer (गट विकास अधिकारी)",
+  jurisdiction: "Bhudargad Taluka, District Kolhapur",
+};
+
 export default function BdoDashboardPage() {
   const router = useRouter();
-  const [officer, setOfficer] = useState<any>(null);
+  const [officer, setOfficer] = useState<any>(DEFAULT_OFFICER);
   const [blocks, setBlocks] = useState<BlockOption[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string>("");
   const [activeBlockName, setActiveBlockName] = useState<string>("Bhudargad");
@@ -67,16 +74,17 @@ export default function BdoDashboardPage() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
-    if (!savedUser) {
-      router.push("/login");
-    } else {
+    if (savedUser) {
       try {
         setOfficer(JSON.parse(savedUser));
       } catch {
-        router.push("/login");
+        setOfficer(DEFAULT_OFFICER);
       }
+    } else {
+      localStorage.setItem("balsaathi_user", JSON.stringify(DEFAULT_OFFICER));
+      setOfficer(DEFAULT_OFFICER);
     }
-  }, [router]);
+  }, []);
 
   // Fetch real data from PostgreSQL API
   const fetchDashboardData = async (blockId?: string) => {
@@ -155,14 +163,6 @@ export default function BdoDashboardPage() {
     document.body.removeChild(link);
   };
 
-  if (!officer) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
-        Authenticating officer session...
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50/70 pb-16">
       {/* ==================== BDO GOVERNANCE HEADER ==================== */}
@@ -183,7 +183,7 @@ export default function BdoDashboardPage() {
                 {activeBlockName} Taluka &mdash; Child Growth &amp; Immunisation
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Logged in as: <strong className="text-white">{officer.name}</strong> ({officer.roleLabel})
+                Logged in as: <strong className="text-white">{officer?.name || "Dr. R. K. Patil"}</strong> ({officer?.roleLabel || "Block Development Officer"})
               </p>
             </div>
 

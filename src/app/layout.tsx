@@ -20,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <head>
+        <link rel="stylesheet" href="/tailwind-out.css" />
         <link rel="stylesheet" href="/assets/css/styles.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
