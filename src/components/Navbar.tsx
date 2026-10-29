@@ -67,7 +67,6 @@ export default function Navbar() {
             >
               <LogIn className="w-4 h-4" />
               <span>Portal Login</span>
-              <span className="hidden lg:inline text-xs opacity-80">(BDO / Sarpanch / Parent)</span>
             </Link>
 
             <Link
@@ -123,7 +122,7 @@ export default function Navbar() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-700 text-white font-semibold text-center shadow"
               >
                 <LogIn className="w-4 h-4" />
-                <span>Portal Login (BDO / Sarpanch / Parent)</span>
+                <span>Portal Login</span>
               </Link>
             </div>
           </nav>
