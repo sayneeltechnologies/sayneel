@@ -464,6 +464,19 @@ export default function BdoDashboardPage() {
                         </span>
                       )}
                     </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => {
+                          setSelectedAwcForDrawer(item);
+                          setDrawerOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-bold border border-blue-200 transition-all shadow-sm group cursor-pointer"
+                        title={`Inspect ${item.awcName} children growth records`}
+                      >
+                        <Users className="w-3.5 h-3.5 text-blue-600 group-hover:text-white" />
+                        <span>Inspect ({item.totalChildren})</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -485,6 +498,8 @@ export default function BdoDashboardPage() {
           villageName={selectedAwcForDrawer.village}
           sectorName={selectedAwcForDrawer.sector}
           workerName={selectedAwcForDrawer.workerName}
+          allAnganwadis={anganwadis}
+          onSelectAwc={(newAwc) => setSelectedAwcForDrawer(newAwc)}
         />
       )}
     </div>

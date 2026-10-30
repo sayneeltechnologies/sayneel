@@ -73,6 +73,8 @@ export default function ChildGrowthDrawer({
   villageName,
   sectorName,
   workerName,
+  allAnganwadis = [],
+  onSelectAwc,
 }: Props) {
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,9 +160,33 @@ export default function ChildGrowthDrawer({
               </span>
               <span className="text-xs text-slate-400">Sector: {sectorName}</span>
             </div>
-            <h2 className="text-xl font-bold mt-1 text-white tracking-tight">
-              {awcName} &mdash; {villageName}
-            </h2>
+            <div className="mt-1 flex items-center gap-2">
+              {allAnganwadis && allAnganwadis.length > 0 && onSelectAwc ? (
+                <div className="relative">
+                  <select
+                    value={awcId}
+                    onChange={(e) => {
+                      const found = allAnganwadis.find((a: any) => (a.awcId || a.id) === e.target.value);
+                      if (found) onSelectAwc(found);
+                    }}
+                    className="bg-slate-800 text-white font-bold text-base sm:text-lg rounded-xl px-3 py-1.5 border border-slate-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm transition"
+                  >
+                    {allAnganwadis.map((a: any) => {
+                      const idVal = a.awcId || a.id;
+                      return (
+                        <option key={idVal} value={idVal} className="bg-slate-900 text-white py-1">
+                          {a.awcName} &mdash; {a.village} ({a.totalChildren} kids)
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ) : (
+                <h2 className="text-xl font-bold text-white tracking-tight">
+                  {awcName} &mdash; {villageName}
+                </h2>
+              )}
+            </div>
             <p className="text-xs text-slate-300 mt-0.5">
               Sevika (Worker): <strong className="text-white">{workerName}</strong>
             </p>
