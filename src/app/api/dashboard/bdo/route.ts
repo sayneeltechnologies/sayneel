@@ -76,6 +76,7 @@ export async function GET(request: Request) {
 
       return {
         id: row.id.slice(0, 8).toUpperCase(),
+        awcId: row.id,
         sector: row.sector_name,
         village: row.awc_name.replace(/\s\d+$/, ""),
         awcName: row.awc_name,

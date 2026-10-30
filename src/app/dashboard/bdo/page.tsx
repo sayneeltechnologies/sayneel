@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import VillageMalnutritionChart from "@/components/dashboard/VillageMalnutritionChart";
 import NutritionDonutChart from "@/components/dashboard/NutritionDonutChart";
 import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
+import ChildGrowthDrawer from "@/components/dashboard/ChildGrowthDrawer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -28,6 +29,7 @@ interface BlockOption {
 
 interface VillageData {
   id: string;
+  awcId?: string;
   sector: string;
   village: string;
   awcName: string;
@@ -74,6 +76,8 @@ export default function BdoDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [sectorFilter, setSectorFilter] = useState("ALL");
+  const [selectedAwcForDrawer, setSelectedAwcForDrawer] = useState<VillageData | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
@@ -402,6 +406,7 @@ export default function BdoDashboardPage() {
                   <th className="py-3.5 px-4 text-center text-rose-700">SAM</th>
                   <th className="py-3.5 px-4 text-center">Vaccine %</th>
                   <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4 text-center">Growth Roster</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -451,6 +456,22 @@ export default function BdoDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ==================== CHILD GROWTH DRILL-DOWN DRAWER ==================== */}
+      {selectedAwcForDrawer && (
+        <ChildGrowthDrawer
+          isOpen={drawerOpen}
+          onClose={() => {
+            setDrawerOpen(false);
+            setSelectedAwcForDrawer(null);
+          }}
+          awcId={selectedAwcForDrawer.awcId || selectedAwcForDrawer.id}
+          awcName={selectedAwcForDrawer.awcName}
+          villageName={selectedAwcForDrawer.village}
+          sectorName={selectedAwcForDrawer.sector}
+          workerName={selectedAwcForDrawer.workerName}
+        />
+      )}
     </div>
   );
 }
