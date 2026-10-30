@@ -10,6 +10,7 @@ import Link from "next/link";
 import {
   Building2,
   Users,
+  LineChart,
   AlertTriangle,
   HeartPulse,
   Download,
@@ -218,6 +219,20 @@ export default function BdoDashboardPage() {
                 title="Refresh from Database"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              </button>
+
+              <button
+                onClick={() => {
+                  if (anganwadis.length > 0) {
+                    setSelectedAwcForDrawer(anganwadis[0]);
+                    setDrawerOpen(true);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition animate-pulse"
+                title="View Child WHO Growth Reports"
+              >
+                <LineChart className="w-4 h-4" />
+                <span>Growth Reports</span>
               </button>
 
               <button
