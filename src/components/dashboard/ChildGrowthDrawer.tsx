@@ -55,6 +55,21 @@ interface HistoryItem {
   measuredDate: string;
 }
 
+interface AnganwadiOption {
+  id: string;
+  awcId?: string;
+  sector: string;
+  village: string;
+  awcName: string;
+  workerName: string;
+  totalChildren: number;
+  normalCount: number;
+  mamCount: number;
+  samCount: number;
+  vaccineRate: number;
+  status: "Normal" | "Attention" | "Critical";
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +78,8 @@ interface Props {
   villageName: string;
   sectorName: string;
   workerName: string;
+  allAnganwadis?: AnganwadiOption[];
+  onSelectAwc?: (awc: AnganwadiOption) => void;
 }
 
 export default function ChildGrowthDrawer({
