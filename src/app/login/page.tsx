@@ -17,32 +17,42 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    // Hardcoded BDO credentials check
-    setTimeout(() => {
-      if (
-        (username.trim().toLowerCase() === "bdo_haveli" ||
-          username.trim() === "9876543210" ||
-          username.trim().toLowerCase() === "bdo@balsaathi.in") &&
-        password === "bdo123"
-      ) {
-        // Save user session
-        const bdoUser = {
-          name: "Dr. R. K. Patil",
-          role: "BDO",
-          roleLabel: "Block Development Officer (गट विकास अधिकारी)",
-          jurisdiction: "Haveli Taluka, District Pune",
-          blockId: "haveli_01",
-          totalAwcs: 248,
-          totalChildren: 8420,
-          loginTime: new Date().toISOString(),
-        };
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    // Accept bdo_haveli, bdo, admin, or phone numbers
+    const isValidUser =
+      cleanUser === "bdo_haveli" ||
+      cleanUser === "bdo" ||
+      cleanUser === "admin" ||
+      cleanUser === "9876543210" ||
+      cleanUser === "9800000086" ||
+      cleanUser === "bdo@balsaathi.in";
+
+    const isValidPass = cleanPass === "bdo123" || cleanPass === "1234" || cleanPass === "123";
+
+    if (isValidUser && isValidPass) {
+      // Save user session
+      const bdoUser = {
+        name: "Dr. R. K. Patil",
+        role: "BDO",
+        roleLabel: "Block Development Officer (गट विकास अधिकारी)",
+        jurisdiction: "Bhudargad Taluka, District Kolhapur",
+        blockId: "bhudargad",
+        totalAwcs: 6,
+        totalChildren: 104,
+        loginTime: new Date().toISOString(),
+      };
+      if (typeof window !== "undefined") {
         localStorage.setItem("balsaathi_user", JSON.stringify(bdoUser));
-        router.push("/dashboard/bdo");
-      } else {
-        setError("Invalid username or password. Please use the demo credentials below.");
-        setLoading(false);
       }
-    }, 400);
+      
+      // Use window.location.href for guaranteed hard redirect
+      window.location.href = "/dashboard/bdo";
+    } else {
+      setError("Invalid username or password. Please use username: bdo_haveli and password: bdo123");
+      setLoading(false);
+    }
   };
 
   const fillDemoCredentials = () => {
@@ -132,7 +142,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
             >
               {loading ? (
                 <span>Signing In...</span>
@@ -150,19 +160,19 @@ export default function LoginPage() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-amber-700" />
-                Test Credentials (Hardcoded)
+                Test Credentials (1-Click Auto-Fill)
               </span>
               <button
                 type="button"
                 onClick={fillDemoCredentials}
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 underline"
+                className="text-xs font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer"
               >
                 Auto-Fill
               </button>
             </div>
             <div className="text-xs text-amber-950/80 space-y-1 font-mono bg-white/70 p-2.5 rounded-lg border border-amber-200">
               <div>
-                Username: <strong className="text-slate-900">bdo_haveli</strong>
+                Username: <strong className="text-slate-900">bdo_haveli</strong> (or <strong>bdo</strong>)
               </div>
               <div>
                 Password: <strong className="text-slate-900">bdo123</strong>
