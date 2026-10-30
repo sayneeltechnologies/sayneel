@@ -32,16 +32,21 @@ export default function ImmunisationGauge({ rate, target = 95.0 }: Props) {
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <h3 className="text-sm font-bold text-slate-900">Immunisation Coverage</h3>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 leading-none">Vaccination Meter</h3>
+            <span className="text-[10px] text-slate-400 font-medium">Routine Immunisation (FIC)</span>
+          </div>
         </div>
         <span
           className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded ${
             isTargetAchieved
               ? "bg-emerald-100 text-emerald-800"
+              : currentRate >= 80
+              ? "bg-blue-100 text-blue-800"
               : "bg-amber-100 text-amber-800"
           }`}
         >
-          {isTargetAchieved ? "Target Exceeded" : "Action Needed"}
+          {isTargetAchieved ? "Target Exceeded" : currentRate >= 80 ? "Good Coverage" : "Action Needed"}
         </span>
       </div>
 
@@ -87,7 +92,7 @@ export default function ImmunisationGauge({ rate, target = 95.0 }: Props) {
             {rate}%
           </div>
           <span className="text-[10px] text-slate-500 font-semibold uppercase mt-0.5">
-            Fully Vaccinated
+            Doses Administered
           </span>
         </div>
       </div>
@@ -97,7 +102,7 @@ export default function ImmunisationGauge({ rate, target = 95.0 }: Props) {
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500 flex items-center gap-1 font-medium">
             <Target className="w-3.5 h-3.5 text-blue-600" />
-            National Goal: <strong className="text-slate-700">{target.toFixed(1)}%</strong>
+            National Benchmark: <strong className="text-slate-700">{target.toFixed(1)}%</strong>
           </span>
           <span
             className={`font-bold flex items-center gap-1 ${
@@ -105,7 +110,7 @@ export default function ImmunisationGauge({ rate, target = 95.0 }: Props) {
             }`}
           >
             <Award className="w-3.5 h-3.5" />
-            {isTargetAchieved ? `+${delta}% above target` : `${delta}% gap`}
+            {isTargetAchieved ? `+${delta}% above benchmark` : `${Math.abs(parseFloat(delta))}% to reach benchmark`}
           </span>
         </div>
 

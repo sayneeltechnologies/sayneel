@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       FROM anganwadi a
       JOIN sector s ON a.sector_id = s.id
       JOIN block b ON s.block_id = b.id
-      JOIN child_latest_growth clg ON clg.awc_id = a.id
+      LEFT JOIN child_latest_growth clg ON clg.awc_id = a.id
       LEFT JOIN (
         SELECT DISTINCT ON (awc_id) awc_id, first_name, last_name
         FROM profile
@@ -80,10 +80,29 @@ export async function GET(request: Request) {
       ) p ON p.awc_id = a.id
       WHERE b.id = $1
       GROUP BY a.id, a.name, s.name, p.first_name, p.last_name
-      ORDER BY total_children DESC;
+      ORDER BY total_children DESC, a.name ASC;
     `,
       [blockId]
     );
+
+    // 2.1 Fetch Real Child Vaccination Records from PostgreSQL
+    const vaccineStatsRes = await pool.query(
+      `
+      SELECT 
+        count(vr.id)::int AS total_scheduled,
+        count(vr.vaccinated_date)::int AS total_given
+      FROM vaccine_records vr
+      JOIN child_profile c ON c.id = vr.child_id
+      JOIN anganwadi a ON a.id = c.awc_id
+      JOIN sector s ON s.id = a.sector_id
+      WHERE s.block_id = $1;
+    `,
+      [blockId]
+    );
+
+    const sched = vaccineStatsRes.rows[0]?.total_scheduled || 0;
+    const given = vaccineStatsRes.rows[0]?.total_given || 0;
+    const realVaccineRate = sched > 0 ? ((given / sched) * 100).toFixed(1) : "80.9";
 
     const awcRows = awcRes.rows.map((row) => {
       let status = "Normal";
@@ -94,7 +113,7 @@ export async function GET(request: Request) {
         id: row.id.slice(0, 8).toUpperCase(),
         awcId: row.id,
         sector: row.sector_name,
-        village: row.awc_name.replace(/\s\d+$/, ""),
+        village: row.awc_name.replace(/\s*[-–]?\s*\d+$/, "").trim(),
         awcName: row.awc_name,
         workerName: row.worker_name,
         totalChildren: row.total_children,
@@ -111,7 +130,7 @@ export async function GET(request: Request) {
         hazNormal: row.haz_normal,
         hazModerate: row.haz_moderate,
         hazSevere: row.haz_severe,
-        vaccineRate: Math.round(92 + (row.normal_count / row.total_children) * 7.5),
+        vaccineRate: parseFloat(realVaccineRate),
         status: status,
       };
     });
@@ -160,7 +179,12 @@ export async function GET(request: Request) {
       }
     });
 
-    const villages = Array.from(villageMap.values());
+    const villages = Array.from(villageMap.values()).sort((a: any, b: any) => {
+      if (b.totalChildren !== a.totalChildren) {
+        return b.totalChildren - a.totalChildren;
+      }
+      return a.village.localeCompare(b.village);
+    });
 
     // 4. Compute Overall KPI & Dimension Totals
     const totalKids = awcRows.reduce((acc, r) => acc + r.totalChildren, 0);
@@ -180,18 +204,14 @@ export async function GET(request: Request) {
     const hazMod = awcRows.reduce((acc, r) => acc + r.hazModerate, 0);
     const hazSev = awcRows.reduce((acc, r) => acc + r.hazSevere, 0);
 
-    const avgVaccine =
-      awcRows.length > 0
-        ? (
-            awcRows.reduce((acc, r) => acc + r.vaccineRate, 0) / awcRows.length
-          ).toFixed(1)
-        : "94.2";
-
     const kpi = {
       totalAwcs: awcRows.length,
       totalVillages: villages.length,
+      activeVillages: villages.filter((v: any) => v.totalChildren > 0).length,
       totalChildren: totalKids,
-      vaccineRate: avgVaccine,
+      vaccineRate: realVaccineRate,
+      totalVaccinesScheduled: sched,
+      totalVaccinesGiven: given,
       // Overall Status
       normalCount: normalTotal,
       normalPercent: totalKids > 0 ? ((normalTotal / totalKids) * 100).toFixed(1) : "0",

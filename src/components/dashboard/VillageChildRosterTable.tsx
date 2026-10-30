@@ -42,11 +42,16 @@ export interface ChildRecord {
   measuredDate: string | null;
 }
 
+export interface VillageOption {
+  village: string;
+  totalChildren?: number;
+}
+
 interface Props {
   villageName: string;
   talukaName: string;
   blockId: string;
-  allVillages?: string[];
+  allVillages?: Array<string | VillageOption>;
   onSelectVillage?: (villageName: string) => void;
   onClearVillageFilter?: () => void;
 }
@@ -158,43 +163,61 @@ export default function VillageChildRosterTable({
           {allVillages && allVillages.length > 1 && onSelectVillage && (
             <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
-                Villages:
+                Active Villages:
               </span>
-              {allVillages.map((v) => {
-                const isActive = v === villageName;
+              {allVillages.slice(0, 10).map((item) => {
+                const vName = typeof item === "string" ? item : item.village;
+                const vCount = typeof item === "object" ? item.totalChildren : undefined;
+                const isActive = vName === villageName;
                 return (
                   <button
-                    key={v}
-                    onClick={() => onSelectVillage(v)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    key={vName}
+                    onClick={() => onSelectVillage(vName)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                       isActive
                         ? "bg-amber-400 text-slate-950 shadow-md font-black ring-2 ring-amber-300"
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
                     }`}
                   >
-                    {v}
+                    <span>{vName}</span>
+                    {vCount !== undefined && (
+                      <span className={`text-[10px] px-1 py-0.2 rounded-full font-bold ${
+                        isActive ? "bg-slate-950/20 text-slate-950" : "bg-slate-700 text-slate-300"
+                      }`}>
+                        {vCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
+              {allVillages.length > 10 && (
+                <span className="text-[10px] text-slate-400 font-semibold italic ml-1">
+                  +{allVillages.length - 10} more in dropdown &rarr;
+                </span>
+              )}
             </div>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-          {/* Direct Dropdown Selector */}
+          {/* Direct Dropdown Selector with all Taluka Villages */}
           {allVillages && allVillages.length > 1 && onSelectVillage && (
             <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 shadow-sm">
               <span className="text-xs font-semibold text-slate-300">Village:</span>
               <select
                 value={villageName}
                 onChange={(e) => onSelectVillage(e.target.value)}
-                className="bg-slate-900 text-amber-400 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                className="bg-slate-900 text-amber-400 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer max-w-[200px]"
               >
-                {allVillages.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
+                {allVillages.map((item) => {
+                  const vName = typeof item === "string" ? item : item.village;
+                  const vCount = typeof item === "object" ? item.totalChildren : undefined;
+                  return (
+                    <option key={vName} value={vName}>
+                      {vName} {vCount !== undefined ? `(${vCount} children)` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -281,9 +304,18 @@ export default function VillageChildRosterTable({
             <span className="text-xs font-semibold">Loading child growth profiles for {villageName}...</span>
           </div>
         ) : filteredChildren.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-xs">
-            <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <span>No children match the active search or filter in {villageName}.</span>
+          <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <Users className="w-10 h-10 text-slate-300 mx-auto mb-1" />
+            <span className="font-bold text-slate-700 text-sm">
+              {children.length === 0
+                ? `No children currently registered in ${villageName}`
+                : `No children match the active search or filter in ${villageName}`}
+            </span>
+            {children.length === 0 && (
+              <p className="text-slate-400 max-w-md">
+                This village currently has 0 registered child growth profiles in the active cohort. You can select another village from the dropdown above to inspect child records.
+              </p>
+            )}
           </div>
         ) : (
           <table className="w-full text-left text-xs text-slate-700">

@@ -239,7 +239,7 @@ export default function BdoDashboardPage() {
               villageName={selectedVillage}
               talukaName={activeBlockName}
               blockId={selectedBlockId}
-              allVillages={villages.map((v) => v.village)}
+              allVillages={villages.map((v) => ({ village: v.village, totalChildren: v.totalChildren }))}
               onSelectVillage={handleVillageSelect}
               onClearVillageFilter={() => {
                 // Scroll back up to Tier 2
