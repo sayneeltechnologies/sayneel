@@ -125,6 +125,10 @@ export default function BdoDashboardPage() {
 
   const handleBlockChange = (newBlockId: string) => {
     setSelectedBlockId(newBlockId);
+    // Reset filters when switching Taluka/Block so new sectors are visible immediately
+    setSectorFilter("ALL");
+    setFilterStatus("ALL");
+    setSearchQuery("");
     fetchDashboardData(newBlockId);
   };
 
