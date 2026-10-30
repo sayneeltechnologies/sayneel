@@ -200,9 +200,56 @@ export default function BdoDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
         {/* ==================== TIER 1: HIGH-LEVEL VISUAL MASTER CHARTS ==================== */}
         {kpi && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            {/* Left 8 Cols: Master Donut with Dimension Toggle (Status, WAZ, WHZ, HAZ) */}
-            <div className="lg:col-span-8">
+          <div className="space-y-6">
+            {/* Top Bar: Executive Summary Banner + Vaccination Meter */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              <div className="lg:col-span-8 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 p-6 rounded-3xl text-white flex flex-col justify-between shadow-sm border border-slate-800">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+                    <span>Taluka Child Health Administration</span>
+                    <span>&bull;</span>
+                    <span className="text-amber-400">{activeBlockName} Block</span>
+                  </div>
+                  <h2 className="text-2xl font-black mt-1 text-white tracking-tight">
+                    Clinical Malnutrition &amp; Growth Triage
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+                    Executive multi-dimensional surveillance evaluating all 4 WHO clinical growth standards simultaneously across {kpi.totalVillages} villages.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-700/60 mt-4">
+                  <div className="bg-slate-800/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Total Cohort</span>
+                    <div className="text-xl font-black text-white">{kpi.totalChildren}</div>
+                    <span className="text-[10px] text-slate-400">Enrolled Children</span>
+                  </div>
+                  <div className="bg-slate-800/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase">Healthy (Normal)</span>
+                    <div className="text-xl font-black text-emerald-400">{kpi.normalCount}</div>
+                    <span className="text-[10px] text-slate-400">{kpi.normalPercent}% on track</span>
+                  </div>
+                  <div className="bg-slate-800/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] font-bold text-amber-400 uppercase">MAM Warning</span>
+                    <div className="text-xl font-black text-amber-400">{kpi.mamCount}</div>
+                    <span className="text-[10px] text-slate-400">Moderate cases</span>
+                  </div>
+                  <div className="bg-slate-800/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] font-bold text-rose-400 uppercase">SAM Emergency</span>
+                    <div className="text-xl font-black text-rose-400">{kpi.samCount}</div>
+                    <span className="text-[10px] text-slate-400">Immediate triage</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vaccination Meter */}
+              <div className="lg:col-span-4 flex flex-col justify-between">
+                <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
+              </div>
+            </div>
+
+            {/* All 4 WHO Clinical Donut Charts Grid */}
+            <div className="w-full">
               <MasterDonutChart
                 totalChildren={kpi.totalChildren}
                 dimensions={kpi.dimensions}
@@ -210,11 +257,6 @@ export default function BdoDashboardPage() {
                 onDimensionChange={(dim) => setActiveDimension(dim)}
                 talukaName={activeBlockName}
               />
-            </div>
-
-            {/* Right 4 Cols: Vaccine Target Speedometer Gauge */}
-            <div className="lg:col-span-4 flex flex-col justify-between">
-              <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
             </div>
           </div>
         )}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { Activity, Scale, Ruler, HeartPulse } from "lucide-react";
+import { Activity, Scale, Ruler, HeartPulse, CheckCircle2 } from "lucide-react";
 
 export type GrowthDimension = "status" | "waz" | "whz" | "haz";
 
@@ -19,64 +19,59 @@ interface Props {
   talukaName: string;
 }
 
-const DIMENSION_CONFIG = {
-  status: {
+interface DimensionMeta {
+  key: GrowthDimension;
+  title: string;
+  shortCode: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+  normalLabel: string;
+  moderateLabel: string;
+  severeLabel: string;
+}
+
+const DIMENSIONS_LIST: DimensionMeta[] = [
+  {
+    key: "status",
     title: "Overall Triage Status",
-    subtitle: "Standard WHO Composite Clinical Triage (Normal vs MAM vs SAM)",
-    labels: {
-      normal: "Healthy (Standard)",
-      moderate: "MAM (Moderate)",
-      severe: "SAM (Severe Red)",
-    },
-    desc: {
-      normal: "WHO Z-Score > -2 SD (Healthy Growth)",
-      moderate: "WHO Z-Score between -2 SD and -3 SD",
-      severe: "WHO Z-Score < -3 SD (Emergency Triage)",
-    },
+    shortCode: "WHO Triage",
+    subtitle: "Composite Normal vs MAM vs SAM",
+    icon: Activity,
+    normalLabel: "Normal (Healthy)",
+    moderateLabel: "MAM (Moderate)",
+    severeLabel: "SAM (Severe Red)",
   },
-  waz: {
-    title: "Weight-for-Age (WAZ)",
-    subtitle: "Underweight Assessment (Body mass proportional to age)",
-    labels: {
-      normal: "Normal Weight",
-      moderate: "Moderately Underweight",
-      severe: "Severely Underweight",
-    },
-    desc: {
-      normal: "WAZ >= -2 SD",
-      moderate: "WAZ between -2 SD & -3 SD",
-      severe: "WAZ < -3 SD (Severe Underweight)",
-    },
+  {
+    key: "waz",
+    title: "Weight-for-Age",
+    shortCode: "WAZ",
+    subtitle: "Underweight Monitoring",
+    icon: Scale,
+    normalLabel: "Normal Weight",
+    moderateLabel: "Mod. Underweight",
+    severeLabel: "Sev. Underweight",
   },
-  whz: {
-    title: "Weight-for-Height (WHZ / WFL)",
-    subtitle: "Acute Wasting Assessment (Body mass proportional to stature)",
-    labels: {
-      normal: "Normal Proportions",
-      moderate: "Moderate Wasting",
-      severe: "Severe Wasting",
-    },
-    desc: {
-      normal: "WHZ >= -2 SD",
-      moderate: "WHZ between -2 SD & -3 SD (MAM Wasting)",
-      severe: "WHZ < -3 SD (SAM Acute Starvation)",
-    },
+  {
+    key: "whz",
+    title: "Weight-for-Height",
+    shortCode: "WHZ / WFL",
+    subtitle: "Acute Wasting & Starvation",
+    icon: HeartPulse,
+    normalLabel: "Normal Proportions",
+    moderateLabel: "Moderate Wasting",
+    severeLabel: "Severe Wasting",
   },
-  haz: {
-    title: "Height-for-Age (HAZ / LHFA)",
-    subtitle: "Chronic Stunting Assessment (Linear growth failure over age)",
-    labels: {
-      normal: "Normal Stature",
-      moderate: "Moderate Stunting",
-      severe: "Severe Stunting",
-    },
-    desc: {
-      normal: "HAZ >= -2 SD",
-      moderate: "HAZ between -2 SD & -3 SD (Chronic Nutrition Lag)",
-      severe: "HAZ < -3 SD (Severe Growth Stunting)",
-    },
+  {
+    key: "haz",
+    title: "Height-for-Age",
+    shortCode: "HAZ / LHFA",
+    subtitle: "Chronic Stunting / Linear Growth",
+    icon: Ruler,
+    normalLabel: "Normal Stature",
+    moderateLabel: "Moderate Stunting",
+    severeLabel: "Severe Stunting",
   },
-};
+];
 
 export default function MasterDonutChart({
   totalChildren,
@@ -91,196 +86,187 @@ export default function MasterDonutChart({
     setIsMounted(true);
   }, []);
 
-  const config = DIMENSION_CONFIG[activeDimension];
-  const activeData = dimensions[activeDimension] || { normal: 0, moderate: 0, severe: 0 };
-
-  const normPct = totalChildren > 0 ? ((activeData.normal / totalChildren) * 100).toFixed(1) : "0";
-  const modPct = totalChildren > 0 ? ((activeData.moderate / totalChildren) * 100).toFixed(1) : "0";
-  const sevPct = totalChildren > 0 ? ((activeData.severe / totalChildren) * 100).toFixed(1) : "0";
-
-  const chartData = [
-    {
-      name: config.labels.normal,
-      value: activeData.normal,
-      percent: normPct,
-      color: "#10B981",
-      description: config.desc.normal,
-    },
-    {
-      name: config.labels.moderate,
-      value: activeData.moderate,
-      percent: modPct,
-      color: "#F59E0B",
-      description: config.desc.moderate,
-    },
-    {
-      name: config.labels.severe,
-      value: activeData.severe,
-      percent: sevPct,
-      color: "#EF4444",
-      description: config.desc.severe,
-    },
-  ];
-
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
-      {/* ==================== DIMENSION TOGGLE PILLS ==================== */}
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div>
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                {config.title}
-              </h3>
+    <div className="space-y-3">
+      {/* Section Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
+        <div>
+          <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <span>WHO Clinical Growth Standards &mdash; 4 Dimensions</span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              Simultaneous Overview
+            </span>
+          </h3>
+          <p className="text-xs text-slate-500">
+            Click any of the 4 pie charts to inspect its village-wise stacked distribution below
+          </p>
+        </div>
+
+        <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 self-start sm:self-auto">
+          {talukaName} Taluka
+        </span>
+      </div>
+
+      {/* 4 Pie / Donut Charts Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {DIMENSIONS_LIST.map((dim) => {
+          const Icon = dim.icon;
+          const isActive = activeDimension === dim.key;
+          const data = dimensions[dim.key] || { normal: 0, moderate: 0, severe: 0 };
+          const evaluated = data.normal + data.moderate + data.severe;
+
+          const normPct = evaluated > 0 ? ((data.normal / evaluated) * 100).toFixed(0) : "0";
+          const modPct = evaluated > 0 ? ((data.moderate / evaluated) * 100).toFixed(0) : "0";
+          const sevPct = evaluated > 0 ? ((data.severe / evaluated) * 100).toFixed(0) : "0";
+
+          const chartData = [
+            { name: dim.normalLabel, value: data.normal, color: "#10B981" },
+            { name: dim.moderateLabel, value: data.moderate, color: "#F59E0B" },
+            { name: dim.severeLabel, value: data.severe, color: "#EF4444" },
+          ];
+
+          return (
+            <div
+              key={dim.key}
+              onClick={() => onDimensionChange(dim.key)}
+              className={`p-4 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between group ${
+                isActive
+                  ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-500/30"
+                  : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+              }`}
+            >
+              {/* Card Header */}
+              <div>
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                        isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 leading-tight">
+                        {dim.title}
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {dim.shortCode}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isActive ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+                      <CheckCircle2 className="w-3 h-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600">
+                      Select &rarr;
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-snug line-clamp-1">
+                  {dim.subtitle}
+                </p>
+              </div>
+
+              {/* Mini Donut Chart Canvas */}
+              <div className="relative w-full h-36 my-2 flex items-center justify-center">
+                {!isMounted ? (
+                  <div className="w-24 h-24 rounded-full border-4 border-slate-100 animate-pulse"></div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={56}
+                        paddingAngle={3}
+                        dataKey="value"
+                        isAnimationActive={true}
+                        animationDuration={700}
+                      >
+                        {chartData.map((entry, idx) => (
+                          <Cell key={`cell-${idx}`} fill={entry.color} stroke="#FFFFFF" strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0];
+                            return (
+                              <div className="bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-xl text-[11px] font-medium z-50">
+                                <span className="font-bold">{d.name}:</span> {d.value} children ({evaluated > 0 ? Math.round(((d.value as number) / evaluated) * 100) : 0}%)
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+
+                {/* Center Hole Callout */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                    {evaluated}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+                    Cohort
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Breakdown Pills */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[11px]">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Normal
+                  </span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {data.normal} <span className="text-[10px] text-slate-400 font-normal">({normPct}%)</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span> Moderate
+                  </span>
+                  <span className="font-mono font-bold text-amber-700">
+                    {data.moderate} <span className="text-[10px] text-slate-400 font-normal">({modPct}%)</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span> Severe
+                  </span>
+                  <span className={`font-mono font-bold ${data.severe > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                    {data.severe} <span className="text-[10px] text-slate-400 font-normal">({sevPct}%)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Indicator */}
+              <div className="pt-2.5 mt-2 border-t border-slate-100 flex items-center justify-center">
+                {isActive ? (
+                  <span className="text-[10px] font-bold text-blue-700 flex items-center gap-1">
+                    <span>Showing on Village Chart below</span> &darr;
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium text-slate-400 group-hover:text-blue-600 transition">
+                    Click to view village distribution
+                  </span>
+                )}
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">{config.subtitle}</p>
-          </div>
-
-          <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 self-start sm:self-auto">
-            {talukaName} Taluka
-          </span>
-        </div>
-
-        {/* 4 Dimension Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4">
-          <button
-            onClick={() => onDimensionChange("status")}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              activeDimension === "status"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Overall Status</span>
-          </button>
-
-          <button
-            onClick={() => onDimensionChange("waz")}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              activeDimension === "waz"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <Scale className="w-3.5 h-3.5" />
-            <span>Weight (WAZ)</span>
-          </button>
-
-          <button
-            onClick={() => onDimensionChange("whz")}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              activeDimension === "whz"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <HeartPulse className="w-3.5 h-3.5" />
-            <span>Wasting (WHZ)</span>
-          </button>
-
-          <button
-            onClick={() => onDimensionChange("haz")}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              activeDimension === "haz"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <Ruler className="w-3.5 h-3.5" />
-            <span>Height (HAZ)</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ==================== DONUT VISUALIZER ==================== */}
-      <div className="relative w-full h-56 my-2 flex items-center justify-center">
-        {!isMounted ? (
-          <div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-2xl animate-pulse text-xs text-slate-400">
-            Rendering WHO Distribution...
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-700 text-xs">
-                        <span className="font-bold flex items-center gap-1.5" style={{ color: d.color }}>
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }}></span>
-                          {d.name}
-                        </span>
-                        <div className="mt-1 text-slate-200">
-                          <strong className="text-white text-base">{d.value}</strong> children ({d.percent}%)
-                        </div>
-                        <p className="text-[10px] text-slate-400 mt-1">{d.description}</p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={68}
-                outerRadius={92}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={2}
-                stroke="#FFFFFF"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        )}
-
-        {/* Center Hole Total Summary */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-            {totalChildren}
-          </span>
-          <span className="text-[11px] text-slate-500 font-extrabold tracking-wider uppercase mt-1">
-            Total Cohort
-          </span>
-        </div>
-      </div>
-
-      {/* ==================== SUMMARY STATS BOTTOM PILLS ==================== */}
-      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 text-center">
-        <div className="p-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-          <span className="text-[11px] font-bold text-emerald-800 block truncate">
-            {config.labels.normal}
-          </span>
-          <div className="text-base font-black text-emerald-700 mt-0.5">
-            {activeData.normal} <span className="text-xs font-semibold text-emerald-600/80">({normPct}%)</span>
-          </div>
-        </div>
-
-        <div className="p-2.5 rounded-2xl bg-amber-50/60 border border-amber-100">
-          <span className="text-[11px] font-bold text-amber-800 block truncate">
-            {config.labels.moderate}
-          </span>
-          <div className="text-base font-black text-amber-700 mt-0.5">
-            {activeData.moderate} <span className="text-xs font-semibold text-amber-600/80">({modPct}%)</span>
-          </div>
-        </div>
-
-        <div className="p-2.5 rounded-2xl bg-rose-50/60 border border-rose-100">
-          <span className="text-[11px] font-bold text-rose-800 block truncate">
-            {config.labels.severe}
-          </span>
-          <div className="text-base font-black text-rose-700 mt-0.5">
-            {activeData.severe} <span className="text-xs font-semibold text-rose-600/80">({sevPct}%)</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
