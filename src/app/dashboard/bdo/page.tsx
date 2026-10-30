@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import VillageMalnutritionChart from "@/components/dashboard/VillageMalnutritionChart";
+import NutritionDonutChart from "@/components/dashboard/NutritionDonutChart";
+import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -297,48 +300,33 @@ export default function BdoDashboardPage() {
           </div>
         )}
 
-        {/* ==================== MALNUTRITION DISTRIBUTION BAR ==================== */}
+        {/* ==================== EXECUTIVE CHARTS CENTERPIECE (OPTION 2) ==================== */}
         {kpi && (
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {activeBlockName} WHO Growth Distribution &amp; Classification
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Computed via WHO Z-score reference tables for weight &amp; height
-                </p>
-              </div>
-              <div className="flex items-center gap-4 text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-emerald-700">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Healthy ({kpi.normalCount} / {kpi.normalPercent}%)
-                </span>
-                <span className="flex items-center gap-1.5 text-amber-700">
-                  <span className="w-3 h-3 rounded-full bg-amber-500"></span> MAM ({kpi.mamCount} / {kpi.mamPercent}%)
-                </span>
-                <span className="flex items-center gap-1.5 text-rose-700">
-                  <span className="w-3 h-3 rounded-full bg-rose-500"></span> SAM ({kpi.samCount} / {kpi.samPercent}%)
-                </span>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Left: Sector & Village Malnutrition Stacked Bar Chart (7 cols) */}
+            <div className="lg:col-span-7">
+              <VillageMalnutritionChart
+                data={anganwadis}
+                talukaName={activeBlockName}
+              />
             </div>
 
-            {/* Progress Stack Bar */}
-            <div className="w-full h-5 rounded-full overflow-hidden flex bg-slate-100 shadow-inner">
-              <div
-                style={{ width: `${kpi.normalPercent}%` }}
-                className="bg-emerald-500 hover:opacity-90 transition-all"
-                title={`Healthy: ${kpi.normalCount} children (${kpi.normalPercent}%)`}
-              ></div>
-              <div
-                style={{ width: `${kpi.mamPercent}%` }}
-                className="bg-amber-500 hover:opacity-90 transition-all"
-                title={`MAM: ${kpi.mamCount} children (${kpi.mamPercent}%)`}
-              ></div>
-              <div
-                style={{ width: `${kpi.samPercent}%` }}
-                className="bg-rose-500 hover:opacity-90 transition-all"
-                title={`SAM: ${kpi.samCount} children (${kpi.samPercent}%)`}
-              ></div>
+            {/* Right: Nutrition Donut & Immunisation Gauge (5 cols) */}
+            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
+              <NutritionDonutChart
+                totalChildren={kpi.totalChildren}
+                normalCount={kpi.normalCount}
+                normalPercent={kpi.normalPercent}
+                mamCount={kpi.mamCount}
+                mamPercent={kpi.mamPercent}
+                samCount={kpi.samCount}
+                samPercent={kpi.samPercent}
+              />
+
+              <ImmunisationGauge
+                rate={kpi.vaccineRate}
+                target={95.0}
+              />
             </div>
           </div>
         )}
