@@ -1,0 +1,229 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+import { BarChart3, AlertCircle, ArrowDownRight } from "lucide-react";
+import { GrowthDimension } from "./MasterDonutChart";
+
+interface VillageSummary {
+  village: string;
+  sector: string;
+  awcIds: string[];
+  awcCount: number;
+  totalChildren: number;
+  normalCount: number;
+  mamCount: number;
+  samCount: number;
+  wazNormal: number;
+  wazModerate: number;
+  wazSevere: number;
+  whzNormal: number;
+  whzModerate: number;
+  whzSevere: number;
+  hazNormal: number;
+  hazModerate: number;
+  hazSevere: number;
+}
+
+interface Props {
+  villages: VillageSummary[];
+  activeDimension: GrowthDimension;
+  talukaName: string;
+  selectedVillage: string | null;
+  onSelectVillage: (villageName: string) => void;
+}
+
+const DIMENSION_TITLES = {
+  status: "Overall Malnutrition (Normal vs MAM vs SAM)",
+  waz: "Underweight Distribution (Weight-for-Age)",
+  whz: "Acute Wasting Distribution (Weight-for-Height)",
+  haz: "Chronic Stunting Distribution (Height-for-Age)",
+};
+
+export default function VillageStackedBarChart({
+  villages,
+  activeDimension,
+  talukaName,
+  selectedVillage,
+  onSelectVillage,
+}: Props) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Format data based on activeDimension
+  const chartData = villages.map((v) => {
+    let normal = v.normalCount;
+    let moderate = v.mamCount;
+    let severe = v.samCount;
+
+    if (activeDimension === "waz") {
+      normal = v.wazNormal;
+      moderate = v.wazModerate;
+      severe = v.wazSevere;
+    } else if (activeDimension === "whz") {
+      normal = v.whzNormal;
+      moderate = v.whzModerate;
+      severe = v.whzSevere;
+    } else if (activeDimension === "haz") {
+      normal = v.hazNormal;
+      moderate = v.hazModerate;
+      severe = v.hazSevere;
+    }
+
+    return {
+      name: v.village.length > 12 ? v.village.slice(0, 12) + "…" : v.village,
+      village: v.village,
+      sector: v.sector,
+      total: v.totalChildren,
+      normal,
+      moderate,
+      severe,
+    };
+  });
+
+  const totalSevere = chartData.reduce((acc, c) => acc + c.severe, 0);
+
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Village-Wise Stacked Distribution
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Showing: <strong className="text-slate-800">{DIMENSION_TITLES[activeDimension]}</strong> across {talukaName}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {totalSevere > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                <span>{totalSevere} Severe Hotspots</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Legend Pills & Drill-down Helper */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 pb-2">
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Normal / Healthy
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-amber-500"></span> Moderate (MAM / -2 SD)
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-rose-500"></span> Severe (SAM / -3 SD)
+            </span>
+          </div>
+
+          <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
+            <ArrowDownRight className="w-3.5 h-3.5" /> Click any bar to inspect village child roster
+          </span>
+        </div>
+      </div>
+
+      {/* Chart Canvas */}
+      <div className="w-full h-72 sm:h-80 pt-2 cursor-pointer">
+        {!isMounted ? (
+          <div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-2xl animate-pulse text-xs text-slate-400">
+            Rendering Village Stacked Bars...
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: -20, bottom: 25 }}
+              onClick={(e: any) => {
+                if (e && e.activePayload && e.activePayload.length) {
+                  const clickedVillage = e.activePayload[0].payload.village;
+                  onSelectVillage(clickedVillage);
+                }
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                angle={-20}
+                textAnchor="end"
+                interval={0}
+                stroke="#CBD5E1"
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#64748B" }}
+                stroke="#CBD5E1"
+                allowDecimals={false}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-700 text-xs space-y-1.5 z-50">
+                        <div className="font-bold text-sm text-slate-100 flex items-center justify-between gap-4">
+                          <span>{d.village}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Sector: {d.sector}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 font-medium pb-1 border-b border-slate-800">
+                          Total Children: <strong className="text-white">{d.total}</strong>
+                        </p>
+                        <div className="flex items-center justify-between gap-4 text-emerald-400">
+                          <span>🟢 Healthy:</span>
+                          <strong className="font-mono">{d.normal} ({d.total > 0 ? Math.round((d.normal / d.total) * 100) : 0}%)</strong>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 text-amber-400">
+                          <span>🟡 Moderate:</span>
+                          <strong className="font-mono">{d.moderate} ({d.total > 0 ? Math.round((d.moderate / d.total) * 100) : 0}%)</strong>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 text-rose-400">
+                          <span>🔴 Severe:</span>
+                          <strong className="font-mono">{d.severe} ({d.total > 0 ? Math.round((d.severe / d.total) * 100) : 0}%)</strong>
+                        </div>
+                        <p className="text-[10px] text-blue-300 pt-1 border-t border-slate-800 italic">
+                          Click to view {d.village} child table &darr;
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar dataKey="normal" name="Normal" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="moderate" name="Moderate" stackId="a" fill="#F59E0B" />
+              <Bar dataKey="severe" name="Severe" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 flex items-center justify-between">
+        <span>Click any bar to drill down directly to that village's children</span>
+        {selectedVillage && (
+          <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+            Selected: {selectedVillage}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const awcId = searchParams.get("awc_id");
+    const villageName = searchParams.get("village");
+    const blockId = searchParams.get("block_id");
     const childId = searchParams.get("child_id");
 
     // Case 1: Fetch child's individual growth history timeline
@@ -52,53 +54,103 @@ export async function GET(request: Request) {
       });
     }
 
-    // Case 2: Fetch all children for an Anganwadi Center
-    if (!awcId) {
-      return NextResponse.json({ error: "Missing awc_id or child_id parameter" }, { status: 400 });
+    // Case 2: Fetch all children for an entire Village OR a single AWC
+    if (!villageName && !awcId) {
+      return NextResponse.json({ error: "Missing village or awc_id parameter" }, { status: 400 });
     }
 
-    const childrenRes = await pool.query(
-      `
-      SELECT 
-        c.id,
-        c.first_name,
-        c.middle_name,
-        c.last_name,
-        c.mother_name,
-        c.gender,
-        c.date_of_birth,
-        g.id AS growth_id,
-        g.weight,
-        g.height,
-        g.head_circumference,
-        g.arm_circumference,
-        COALESCE(g.status, 1) AS status,
-        COALESCE(g.trend, 3) AS trend,
-        g.wfa_zscore,
-        g.lhfa_zscore,
-        g.wfh_zscore,
-        g.measured_date
-      FROM child_profile c
-      LEFT JOIN LATERAL (
-        SELECT * FROM child_growth 
-        WHERE child_id = c.id 
-        ORDER BY measured_date DESC 
-        LIMIT 1
-      ) g ON true
-      WHERE c.awc_id = $1
-      ORDER BY 
-        CASE WHEN g.status = 3 THEN 1 WHEN g.status = 2 THEN 2 ELSE 3 END,
-        c.first_name ASC;
-    `,
-      [awcId]
-    );
+    let query = "";
+    let params: any[] = [];
+
+    if (villageName && blockId) {
+      // Query all children belonging to this village in the selected block
+      query = `
+        SELECT 
+          c.id,
+          c.first_name,
+          c.middle_name,
+          c.last_name,
+          c.mother_name,
+          c.gender,
+          c.date_of_birth,
+          a.name AS awc_name,
+          g.id AS growth_id,
+          g.weight,
+          g.height,
+          g.head_circumference,
+          g.arm_circumference,
+          COALESCE(g.status, 1) AS status,
+          COALESCE(g.trend, 3) AS trend,
+          g.wfa_zscore,
+          g.lhfa_zscore,
+          g.wfh_zscore,
+          g.measured_date
+        FROM child_profile c
+        JOIN anganwadi a ON a.id = c.awc_id
+        JOIN sector s ON s.id = a.sector_id
+        JOIN block b ON b.id = s.block_id
+        LEFT JOIN LATERAL (
+          SELECT * FROM child_growth 
+          WHERE child_id = c.id 
+          ORDER BY measured_date DESC 
+          LIMIT 1
+        ) g ON true
+        WHERE b.id = $1 AND a.name ILIKE $2
+        ORDER BY 
+          CASE WHEN g.status = 3 THEN 1 WHEN g.status = 2 THEN 2 ELSE 3 END,
+          c.first_name ASC;
+      `;
+      params = [blockId, `${villageName}%`];
+    } else {
+      // Fallback by awcId
+      query = `
+        SELECT 
+          c.id,
+          c.first_name,
+          c.middle_name,
+          c.last_name,
+          c.mother_name,
+          c.gender,
+          c.date_of_birth,
+          a.name AS awc_name,
+          g.id AS growth_id,
+          g.weight,
+          g.height,
+          g.head_circumference,
+          g.arm_circumference,
+          COALESCE(g.status, 1) AS status,
+          COALESCE(g.trend, 3) AS trend,
+          g.wfa_zscore,
+          g.lhfa_zscore,
+          g.wfh_zscore,
+          g.measured_date
+        FROM child_profile c
+        JOIN anganwadi a ON a.id = c.awc_id
+        LEFT JOIN LATERAL (
+          SELECT * FROM child_growth 
+          WHERE child_id = c.id 
+          ORDER BY measured_date DESC 
+          LIMIT 1
+        ) g ON true
+        WHERE c.awc_id = $1
+        ORDER BY 
+          CASE WHEN g.status = 3 THEN 1 WHEN g.status = 2 THEN 2 ELSE 3 END,
+          c.first_name ASC;
+      `;
+      params = [awcId];
+    }
+
+    const childrenRes = await pool.query(query, params);
 
     const children = childrenRes.rows.map((row) => {
-      // Calculate age in months & years
+      // Calculate age in months & days
       let ageText = "Unknown";
+      let ageInDays = 0;
       if (row.date_of_birth) {
         const dob = new Date(row.date_of_birth);
         const now = new Date();
+        const diffTime = Math.abs(now.getTime() - dob.getTime());
+        ageInDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const diffMonths =
           (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
         const years = Math.floor(diffMonths / 12);
@@ -122,6 +174,8 @@ export async function GET(request: Request) {
         genderCode: row.gender,
         dob: row.date_of_birth,
         ageText,
+        ageInDays,
+        awcName: row.awc_name,
         weight: row.weight ? parseFloat(row.weight) : null,
         height: row.height ? parseInt(row.height, 10) : null,
         headCircumference: row.head_circumference ? parseFloat(row.head_circumference) : null,
@@ -137,6 +191,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
+      village: villageName,
       awcId,
       totalCount: children.length,
       children,

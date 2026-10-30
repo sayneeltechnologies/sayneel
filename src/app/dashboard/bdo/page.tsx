@@ -1,58 +1,45 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import VillageMalnutritionChart from "@/components/dashboard/VillageMalnutritionChart";
-import NutritionDonutChart from "@/components/dashboard/NutritionDonutChart";
-import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
-import ChildGrowthDrawer from "@/components/dashboard/ChildGrowthDrawer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Building2,
-  Users,
-  LineChart,
-  AlertTriangle,
-  HeartPulse,
   Download,
-  Search,
   LogOut,
-  CheckCircle,
-  TrendingDown,
   MapPin,
   Database,
   RefreshCw,
+  LineChart,
 } from "lucide-react";
+
+import MasterDonutChart, { GrowthDimension } from "@/components/dashboard/MasterDonutChart";
+import VillageStackedBarChart from "@/components/dashboard/VillageStackedBarChart";
+import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
+import VillageChildRosterTable from "@/components/dashboard/VillageChildRosterTable";
 
 interface BlockOption {
   id: string;
   name: string;
 }
 
-interface VillageData {
-  id: string;
-  awcId?: string;
-  sector: string;
+interface VillageSummary {
   village: string;
-  awcName: string;
-  workerName: string;
+  sector: string;
+  awcIds: string[];
+  awcCount: number;
   totalChildren: number;
   normalCount: number;
   mamCount: number;
   samCount: number;
-  vaccineRate: number;
-  status: "Normal" | "Attention" | "Critical";
-}
-
-interface DashboardKpi {
-  totalAwcs: number;
-  totalChildren: number;
-  normalCount: number;
-  normalPercent: string;
-  mamCount: number;
-  mamPercent: string;
-  samCount: number;
-  samPercent: string;
-  vaccineRate: string;
+  wazNormal: number;
+  wazModerate: number;
+  wazSevere: number;
+  whzNormal: number;
+  whzModerate: number;
+  whzSevere: number;
+  hazNormal: number;
+  hazModerate: number;
+  hazSevere: number;
 }
 
 const DEFAULT_OFFICER = {
@@ -68,17 +55,13 @@ export default function BdoDashboardPage() {
   const [blocks, setBlocks] = useState<BlockOption[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string>("");
   const [activeBlockName, setActiveBlockName] = useState<string>("Bhudargad");
-  const [kpi, setKpi] = useState<DashboardKpi | null>(null);
-  const [anganwadis, setAnganwadis] = useState<VillageData[]>([]);
-  const [sectors, setSectors] = useState<string[]>([]);
+  const [kpi, setKpi] = useState<any | null>(null);
+  const [villages, setVillages] = useState<VillageSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("ALL");
-  const [sectorFilter, setSectorFilter] = useState("ALL");
-  const [selectedAwcForDrawer, setSelectedAwcForDrawer] = useState<VillageData | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Progressive Drill-down state
+  const [activeDimension, setActiveDimension] = useState<GrowthDimension>("status");
+  const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
@@ -94,7 +77,6 @@ export default function BdoDashboardPage() {
     }
   }, []);
 
-  // Fetch real data from PostgreSQL API
   const fetchDashboardData = async (blockId?: string) => {
     setLoading(true);
     try {
@@ -109,8 +91,18 @@ export default function BdoDashboardPage() {
         setActiveBlockName(data.activeBlock?.name || "Taluka");
         setSelectedBlockId(data.activeBlock?.id || "");
         setKpi(data.kpi);
-        setSectors(data.sectors || []);
-        setAnganwadis(data.anganwadis || []);
+        setVillages(data.villages || []);
+
+        // Default to first village if none selected
+        if (data.villages && data.villages.length > 0) {
+          setSelectedVillage((prev) =>
+            prev && data.villages.some((v: any) => v.village === prev)
+              ? prev
+              : data.villages[0].village
+          );
+        } else {
+          setSelectedVillage(null);
+        }
       }
     } catch (err) {
       console.error("Failed to load dashboard data from PostgreSQL:", err);
@@ -125,10 +117,7 @@ export default function BdoDashboardPage() {
 
   const handleBlockChange = (newBlockId: string) => {
     setSelectedBlockId(newBlockId);
-    // Reset filters when switching Taluka/Block so new sectors are visible immediately
-    setSectorFilter("ALL");
-    setFilterStatus("ALL");
-    setSearchQuery("");
+    setSelectedVillage(null);
     fetchDashboardData(newBlockId);
   };
 
@@ -137,46 +126,17 @@ export default function BdoDashboardPage() {
     router.push("/login");
   };
 
-  // Filtered reports
-  const filteredReports = anganwadis.filter((item) => {
-    const matchesSearch =
-      item.village.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.awcName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sector.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.workerName.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      filterStatus === "ALL" ? true : item.status === filterStatus;
-
-    const matchesSector =
-      sectorFilter === "ALL" ? true : item.sector === sectorFilter;
-
-    return matchesSearch && matchesStatus && matchesSector;
-  });
-
-  const exportToCsv = () => {
-    const headers = "Center ID,Sector,Village,Anganwadi Center,Sevika,Total Kids,Healthy,MAM,SAM,Vaccine %\n";
-    const rows = filteredReports
-      .map(
-        (r) =>
-          `"${r.id}","${r.sector}","${r.village}","${r.awcName}","${r.workerName}",${r.totalChildren},${r.normalCount},${r.mamCount},${r.samCount},${r.vaccineRate}%`
-      )
-      .join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute(
-      "download",
-      `BDO_${activeBlockName}_Taluka_Report_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleVillageSelect = (villageName: string) => {
+    setSelectedVillage(villageName);
+    // Smooth scroll down to the child roster table
+    const el = document.getElementById("village-child-roster");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-16">
+    <div className="min-h-screen bg-slate-50/70 pb-20">
       {/* ==================== BDO GOVERNANCE HEADER ==================== */}
       <div className="bg-slate-900 text-white border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
@@ -201,7 +161,7 @@ export default function BdoDashboardPage() {
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
               {/* Taluka Selector */}
-              <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+              <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
                 <MapPin className="w-4 h-4 text-amber-400" />
                 <span className="text-xs text-slate-300 font-semibold">Taluka:</span>
                 <select
@@ -219,37 +179,15 @@ export default function BdoDashboardPage() {
 
               <button
                 onClick={() => fetchDashboardData(selectedBlockId)}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
                 title="Refresh from Database"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               </button>
 
               <button
-                onClick={() => {
-                  if (anganwadis.length > 0) {
-                    setSelectedAwcForDrawer(anganwadis[0]);
-                    setDrawerOpen(true);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition animate-pulse"
-                title="View Child WHO Growth Reports"
-              >
-                <LineChart className="w-4 h-4" />
-                <span>Growth Reports</span>
-              </button>
-
-              <button
-                onClick={exportToCsv}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow transition"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export CSV</span>
-              </button>
-
-              <button
                 onClick={handleLogout}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>
@@ -260,252 +198,55 @@ export default function BdoDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        {/* ==================== KPI SUMMARY CARDS ==================== */}
-        {kpi && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Card 1 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Active Centers</span>
-                <Building2 className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900">{kpi.totalAwcs} AWCs</div>
-              <span className="text-xs text-emerald-600 font-semibold mt-1 inline-flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> 100% Reporting
-              </span>
-            </div>
-
-            {/* Card 2 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Monitored Children</span>
-                <Users className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900">
-                {kpi.totalChildren}
-              </div>
-              <span className="text-xs text-slate-500 mt-1 block">In {activeBlockName}</span>
-            </div>
-
-            {/* Card 3 (SAM) */}
-            <div className="p-5 rounded-2xl bg-white border border-rose-200 shadow-sm bg-rose-50/30">
-              <div className="flex items-center justify-between text-rose-700 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">SAM (Severe Red)</span>
-                <AlertTriangle className="w-5 h-5 text-rose-600" />
-              </div>
-              <div className="text-2xl font-extrabold text-rose-600">{kpi.samCount}</div>
-              <span className="text-xs text-rose-700 font-semibold mt-1 block">
-                {kpi.samPercent}% of children
-              </span>
-            </div>
-
-            {/* Card 4 (MAM) */}
-            <div className="p-5 rounded-2xl bg-white border border-amber-200 shadow-sm bg-amber-50/30">
-              <div className="flex items-center justify-between text-amber-800 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">MAM (Moderate)</span>
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div className="text-2xl font-extrabold text-amber-600">{kpi.mamCount}</div>
-              <span className="text-xs text-amber-800 mt-1 block">
-                {kpi.mamPercent}% of children
-              </span>
-            </div>
-
-            {/* Card 5 (Vaccines) */}
-            <div className="p-5 rounded-2xl bg-white border border-emerald-200 shadow-sm bg-emerald-50/30">
-              <div className="flex items-center justify-between text-emerald-800 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Immunisation Rate</span>
-                <HeartPulse className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div className="text-2xl font-extrabold text-emerald-700">{kpi.vaccineRate}%</div>
-              <span className="text-xs text-emerald-800 font-medium mt-1 block">Target: 95.0%</span>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== EXECUTIVE CHARTS CENTERPIECE (OPTION 2) ==================== */}
+        {/* ==================== TIER 1: HIGH-LEVEL VISUAL MASTER CHARTS ==================== */}
         {kpi && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            {/* Left: Sector & Village Malnutrition Stacked Bar Chart (7 cols) */}
-            <div className="lg:col-span-7">
-              <VillageMalnutritionChart
-                data={anganwadis}
+            {/* Left 8 Cols: Master Donut with Dimension Toggle (Status, WAZ, WHZ, HAZ) */}
+            <div className="lg:col-span-8">
+              <MasterDonutChart
+                totalChildren={kpi.totalChildren}
+                dimensions={kpi.dimensions}
+                activeDimension={activeDimension}
+                onDimensionChange={(dim) => setActiveDimension(dim)}
                 talukaName={activeBlockName}
               />
             </div>
 
-            {/* Right: Nutrition Donut & Immunisation Gauge (5 cols) */}
-            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
-              <NutritionDonutChart
-                totalChildren={kpi.totalChildren}
-                normalCount={kpi.normalCount}
-                normalPercent={kpi.normalPercent}
-                mamCount={kpi.mamCount}
-                mamPercent={kpi.mamPercent}
-                samCount={kpi.samCount}
-                samPercent={kpi.samPercent}
-              />
-
-              <ImmunisationGauge
-                rate={kpi.vaccineRate}
-                target={95.0}
-              />
+            {/* Right 4 Cols: Vaccine Target Speedometer Gauge */}
+            <div className="lg:col-span-4 flex flex-col justify-between">
+              <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
             </div>
           </div>
         )}
 
-        {/* ==================== REPORTS & VILLAGE PERFORMANCE TABLE ==================== */}
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-          {/* Table Header & Controls */}
-          <div className="p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                Anganwadi Center Child Growth Records
-              </h2>
-              <p className="text-xs text-slate-500">
-                Showing {filteredReports.length} of {anganwadis.length} active centers in {activeBlockName} Taluka
-              </p>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search village, Sevika, AWC..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
-                />
-              </div>
-
-              {/* Sector Dropdown */}
-              <select
-                value={sectorFilter}
-                onChange={(e) => setSectorFilter(e.target.value)}
-                className="py-1.5 px-3 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                <option value="ALL">All Sectors</option>
-                {sectors.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-
-              {/* Status Dropdown */}
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="py-1.5 px-3 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="Normal">Normal</option>
-                <option value="Attention">Attention (MAM)</option>
-                <option value="Critical">Critical (SAM Alert)</option>
-              </select>
-            </div>
+        {/* ==================== TIER 2: VILLAGE-WISE STACKED BAR CHART ==================== */}
+        {villages.length > 0 && (
+          <div className="w-full">
+            <VillageStackedBarChart
+              villages={villages}
+              activeDimension={activeDimension}
+              talukaName={activeBlockName}
+              selectedVillage={selectedVillage}
+              onSelectVillage={handleVillageSelect}
+            />
           </div>
+        )}
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3.5 px-4">Center ID</th>
-                  <th className="py-3.5 px-4">Sector</th>
-                  <th className="py-3.5 px-4">Village / Area</th>
-                  <th className="py-3.5 px-4">Anganwadi Center</th>
-                  <th className="py-3.5 px-4">Sevika Name</th>
-                  <th className="py-3.5 px-4 text-center">Enrolled</th>
-                  <th className="py-3.5 px-4 text-center text-emerald-700">Healthy</th>
-                  <th className="py-3.5 px-4 text-center text-amber-700">MAM</th>
-                  <th className="py-3.5 px-4 text-center text-rose-700">SAM</th>
-                  <th className="py-3.5 px-4 text-center">Vaccine %</th>
-                  <th className="py-3.5 px-4 text-center">Status</th>
-                  <th className="py-3.5 px-4 text-center">Growth Roster</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredReports.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-500">{item.id}</td>
-                    <td className="py-3 px-4 font-medium">{item.sector}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-900">{item.village}</td>
-                    <td className="py-3 px-4 font-medium">{item.awcName}</td>
-                    <td className="py-3 px-4 text-slate-600 font-medium">{item.workerName}</td>
-                    <td className="py-3 px-4 text-center font-bold text-slate-900">{item.totalChildren}</td>
-                    <td className="py-3 px-4 text-center font-bold text-emerald-700 bg-emerald-50/40">
-                      {item.normalCount}
-                    </td>
-                    <td className="py-3 px-4 text-center font-bold text-amber-700 bg-amber-50/40">
-                      {item.mamCount}
-                    </td>
-                    <td className="py-3 px-4 text-center font-bold text-rose-700 bg-rose-50/40">
-                      {item.samCount}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="font-bold text-emerald-700">
-                        {item.vaccineRate}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {item.status === "Normal" && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          On Track
-                        </span>
-                      )}
-                      {item.status === "Attention" && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                          Monitor MAM
-                        </span>
-                      )}
-                      {item.status === "Critical" && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 animate-pulse">
-                          SAM Alert
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedAwcForDrawer(item);
-                          setDrawerOpen(true);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-bold border border-blue-200 transition-all shadow-sm group cursor-pointer"
-                        title={`Inspect ${item.awcName} children growth records`}
-                      >
-                        <Users className="w-3.5 h-3.5 text-blue-600 group-hover:text-white" />
-                        <span>Inspect ({item.totalChildren})</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* ==================== TIER 3: DIRECT VILLAGE CHILD CLINICAL TABLE ==================== */}
+        {selectedVillage && (
+          <div className="w-full">
+            <VillageChildRosterTable
+              villageName={selectedVillage}
+              talukaName={activeBlockName}
+              blockId={selectedBlockId}
+              onClearVillageFilter={() => {
+                // Scroll back up to Tier 2
+                window.scrollTo({ top: 350, behavior: "smooth" });
+              }}
+            />
           </div>
-        </div>
+        )}
       </div>
-
-      {/* ==================== CHILD GROWTH DRILL-DOWN DRAWER ==================== */}
-      {selectedAwcForDrawer && (
-        <ChildGrowthDrawer
-          isOpen={drawerOpen}
-          onClose={() => {
-            setDrawerOpen(false);
-            setSelectedAwcForDrawer(null);
-          }}
-          awcId={selectedAwcForDrawer.awcId || selectedAwcForDrawer.id}
-          awcName={selectedAwcForDrawer.awcName}
-          villageName={selectedAwcForDrawer.village}
-          sectorName={selectedAwcForDrawer.sector}
-          workerName={selectedAwcForDrawer.workerName}
-          allAnganwadis={anganwadis}
-          onSelectAwc={(newAwc) => setSelectedAwcForDrawer(newAwc)}
-        />
-      )}
     </div>
   );
 }
