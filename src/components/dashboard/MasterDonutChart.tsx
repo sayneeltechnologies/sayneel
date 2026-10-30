@@ -44,8 +44,8 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
   {
     key: "waz",
     title: "Weight-for-Age",
-    shortCode: "WAZ",
-    subtitle: "Underweight Monitoring",
+    shortCode: "WAZ Indicator",
+    subtitle: "Underweight Assessment",
     icon: Scale,
     normalLabel: "Normal Weight",
     moderateLabel: "Mod. Underweight",
@@ -54,7 +54,7 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
   {
     key: "whz",
     title: "Weight-for-Height",
-    shortCode: "WHZ / WFL",
+    shortCode: "WHZ / Wasting",
     subtitle: "Acute Wasting & Starvation",
     icon: HeartPulse,
     normalLabel: "Normal Proportions",
@@ -64,7 +64,7 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
   {
     key: "haz",
     title: "Height-for-Age",
-    shortCode: "HAZ / LHFA",
+    shortCode: "HAZ / Stunting",
     subtitle: "Chronic Stunting / Linear Growth",
     icon: Ruler,
     normalLabel: "Normal Stature",
@@ -87,18 +87,18 @@ export default function MasterDonutChart({
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3">
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
         <div>
           <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span>WHO Clinical Growth Standards &mdash; 4 Dimensions</span>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              Simultaneous Overview
+              Side-by-Side Overview
             </span>
           </h3>
           <p className="text-xs text-slate-500">
-            Click any of the 4 pie charts to inspect its village-wise stacked distribution below
+            Click any pie chart below to inspect its village-wise stacked distribution in Tier 2
           </p>
         </div>
 
@@ -107,8 +107,15 @@ export default function MasterDonutChart({
         </span>
       </div>
 
-      {/* 4 Pie / Donut Charts Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Pie / Donut Charts Side-by-Side Grid */}
+      <div
+        className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "1rem",
+        }}
+      >
         {DIMENSIONS_LIST.map((dim) => {
           const Icon = dim.icon;
           const isActive = activeDimension === dim.key;
@@ -140,8 +147,10 @@ export default function MasterDonutChart({
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center ${
-                        isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600"
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition ${
+                        isActive
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600"
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -161,21 +170,21 @@ export default function MasterDonutChart({
                       <CheckCircle2 className="w-3 h-3" /> Active
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600">
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 transition">
                       Select &rarr;
                     </span>
                   )}
                 </div>
 
-                <p className="text-[10px] text-slate-500 mt-1.5 leading-snug line-clamp-1">
+                <p className="text-[10px] text-slate-500 mt-1 leading-snug line-clamp-1">
                   {dim.subtitle}
                 </p>
               </div>
 
-              {/* Mini Donut Chart Canvas */}
-              <div className="relative w-full h-36 my-2 flex items-center justify-center">
+              {/* Donut Chart Canvas */}
+              <div className="relative w-full h-32 my-1 flex items-center justify-center">
                 {!isMounted ? (
-                  <div className="w-24 h-24 rounded-full border-4 border-slate-100 animate-pulse"></div>
+                  <div className="w-20 h-20 rounded-full border-4 border-slate-100 animate-pulse"></div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -183,12 +192,12 @@ export default function MasterDonutChart({
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={40}
-                        outerRadius={56}
+                        innerRadius={36}
+                        outerRadius={50}
                         paddingAngle={3}
                         dataKey="value"
                         isAnimationActive={true}
-                        animationDuration={700}
+                        animationDuration={600}
                       >
                         {chartData.map((entry, idx) => (
                           <Cell key={`cell-${idx}`} fill={entry.color} stroke="#FFFFFF" strokeWidth={2} />
@@ -200,7 +209,7 @@ export default function MasterDonutChart({
                             const d = payload[0];
                             return (
                               <div className="bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-xl text-[11px] font-medium z-50">
-                                <span className="font-bold">{d.name}:</span> {d.value} children ({evaluated > 0 ? Math.round(((d.value as number) / evaluated) * 100) : 0}%)
+                                <span className="font-bold">{d.name}:</span> {d.value} ({evaluated > 0 ? Math.round(((d.value as number) / evaluated) * 100) : 0}%)
                               </div>
                             );
                           }
@@ -213,17 +222,17 @@ export default function MasterDonutChart({
 
                 {/* Center Hole Callout */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                  <span className="text-lg font-black text-slate-900 tracking-tight leading-none">
                     {evaluated}
                   </span>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+                  <span className="text-[8px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
                     Cohort
                   </span>
                 </div>
               </div>
 
-              {/* Status Breakdown Pills */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[11px]">
+              {/* Status Breakdown Legend Rows */}
+              <div className="space-y-1 pt-2 border-t border-slate-100 text-[11px]">
                 <div className="flex items-center justify-between text-slate-700">
                   <span className="flex items-center gap-1.5 font-medium">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Normal
@@ -246,21 +255,21 @@ export default function MasterDonutChart({
                   <span className="flex items-center gap-1.5 font-medium">
                     <span className="w-2 h-2 rounded-full bg-rose-500"></span> Severe
                   </span>
-                  <span className={`font-mono font-bold ${data.severe > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                  <span className={`font-mono font-bold ${data.severe > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
                     {data.severe} <span className="text-[10px] text-slate-400 font-normal">({sevPct}%)</span>
                   </span>
                 </div>
               </div>
 
-              {/* Action Indicator */}
-              <div className="pt-2.5 mt-2 border-t border-slate-100 flex items-center justify-center">
+              {/* Action Indicator Footer */}
+              <div className="pt-2 mt-1.5 border-t border-slate-100 flex items-center justify-center text-center">
                 {isActive ? (
                   <span className="text-[10px] font-bold text-blue-700 flex items-center gap-1">
                     <span>Showing on Village Chart below</span> &darr;
                   </span>
                 ) : (
                   <span className="text-[10px] font-medium text-slate-400 group-hover:text-blue-600 transition">
-                    Click to view village distribution
+                    Click to view village breakdown
                   </span>
                 )}
               </div>
