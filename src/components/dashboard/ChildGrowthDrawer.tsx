@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import WhoGrowthReportModal from "./WhoGrowthReportModal";
 import {
   X,
   User,
@@ -80,6 +81,7 @@ export default function ChildGrowthDrawer({
   const [expandedChildId, setExpandedChildId] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [childHistory, setChildHistory] = useState<HistoryItem[]>([]);
+  const [reportModalChild, setReportModalChild] = useState<any | null>(null);
 
   useEffect(() => {
     if (!isOpen || !awcId) return;
@@ -397,14 +399,21 @@ export default function ChildGrowthDrawer({
                       </div>
                     </div>
 
-                    {/* Expand History Button */}
-                    <div className="mt-3 flex justify-end">
+                    {/* Action Bar: WHO Growth Report + Quick Log */}
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100">
                       <button
-                        onClick={() => toggleExpand(child.id)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition"
+                        onClick={() => setReportModalChild({ ...child, awcName, villageName })}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition"
                       >
                         <LineChart className="w-3.5 h-3.5" />
-                        <span>{isExpanded ? "Hide Growth History" : "View Growth History (WHO Curve)"}</span>
+                        <span>Open WHO Growth Report (4 Charts)</span>
+                      </button>
+
+                      <button
+                        onClick={() => toggleExpand(child.id)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 transition"
+                      >
+                        <span>{isExpanded ? "Hide Log" : "Quick Log"}</span>
                         {isExpanded ? (
                           <ChevronUp className="w-3.5 h-3.5" />
                         ) : (
@@ -494,6 +503,15 @@ export default function ChildGrowthDrawer({
           </button>
         </div>
       </div>
+
+      {/* ==================== WHO GROWTH REPORT MODAL (FROM APP) ==================== */}
+      {reportModalChild && (
+        <WhoGrowthReportModal
+          isOpen={!!reportModalChild}
+          onClose={() => setReportModalChild(null)}
+          child={reportModalChild}
+        />
+      )}
     </div>
   );
 }
