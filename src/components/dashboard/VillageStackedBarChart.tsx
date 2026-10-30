@@ -136,8 +136,36 @@ export default function VillageStackedBarChart({
           </div>
 
           <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
-            <ArrowDownRight className="w-3.5 h-3.5" /> Click any bar to inspect village child roster
+            <ArrowDownRight className="w-3.5 h-3.5" /> Click any bar or village button below
           </span>
+        </div>
+
+        {/* Clickable Village Quick Selector Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 pb-1">
+          <span className="text-[11px] font-bold text-slate-500 mr-1">Select Village:</span>
+          {villages.map((v) => {
+            const isSelected = selectedVillage === v.village;
+            return (
+              <button
+                key={v.village}
+                onClick={() => onSelectVillage(v.village)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
+                  isSelected
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <span>{v.village}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {v.totalChildren}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

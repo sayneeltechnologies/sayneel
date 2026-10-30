@@ -46,6 +46,8 @@ interface Props {
   villageName: string;
   talukaName: string;
   blockId: string;
+  allVillages?: string[];
+  onSelectVillage?: (villageName: string) => void;
   onClearVillageFilter?: () => void;
 }
 
@@ -53,6 +55,8 @@ export default function VillageChildRosterTable({
   villageName,
   talukaName,
   blockId,
+  allVillages = [],
+  onSelectVillage,
   onClearVillageFilter,
 }: Props) {
   const [children, setChildren] = useState<ChildRecord[]>([]);
@@ -149,21 +153,55 @@ export default function VillageChildRosterTable({
           <p className="text-xs text-slate-400 mt-0.5">
             Individual child measurements &amp; clinical WHO standard deviation indicators
           </p>
+
+          {/* Quick Village Switcher Pills */}
+          {allVillages && allVillages.length > 1 && onSelectVillage && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-800">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+                Villages:
+              </span>
+              {allVillages.map((v) => {
+                const isActive = v === villageName;
+                return (
+                  <button
+                    key={v}
+                    onClick={() => onSelectVillage(v)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      isActive
+                        ? "bg-amber-400 text-slate-950 shadow-md font-black ring-2 ring-amber-300"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
+                    }`}
+                  >
+                    {v}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          {onClearVillageFilter && (
-            <button
-              onClick={onClearVillageFilter}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-700"
-            >
-              &larr; Switch Village
-            </button>
+        <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+          {/* Direct Dropdown Selector */}
+          {allVillages && allVillages.length > 1 && onSelectVillage && (
+            <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 shadow-sm">
+              <span className="text-xs font-semibold text-slate-300">Village:</span>
+              <select
+                value={villageName}
+                onChange={(e) => onSelectVillage(e.target.value)}
+                className="bg-slate-900 text-amber-400 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+              >
+                {allVillages.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
 
           <button
             onClick={exportVillageCsv}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Export Roster CSV</span>
