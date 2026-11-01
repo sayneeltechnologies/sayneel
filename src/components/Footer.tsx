@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import PortalLink from "./PortalLink";
 
 export default function Footer() {
   return (
@@ -19,12 +20,9 @@ export default function Footer() {
               Creators of the <strong>BalSaathi</strong> maternal & child health ecosystem.
             </p>
             <div className="pt-2">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-              >
+              <PortalLink className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition">
                 Access BalSaathi Portal &rarr;
-              </Link>
+              </PortalLink>
             </div>
           </div>
 

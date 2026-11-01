@@ -1,0 +1,416 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+import { BarChart3, AlertCircle, Maximize2, Minimize2, ChevronDown, ChevronUp } from "lucide-react";
+import { GrowthDimension } from "./MasterDonutChart";
+
+interface VillageSummary {
+  // Label used as the village's key; includes the taluka in the All Talukas view.
+  village: string;
+  villageName: string;
+  block: string;
+  sector: string;
+  awcIds: string[];
+  awcCount: number;
+  totalChildren: number;
+  normalCount: number;
+  mamCount: number;
+  samCount: number;
+  wazNormal: number;
+  wazModerate: number;
+  wazSevere: number;
+  whzNormal: number;
+  whzModerate: number;
+  whzSevere: number;
+  hazNormal: number;
+  hazModerate: number;
+  hazSevere: number;
+}
+
+interface Props {
+  villages: VillageSummary[];
+  activeDimension: GrowthDimension;
+  talukaName: string;
+  selectedVillage: string | null;
+  onSelectVillage: (villageName: string) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+// Bars shown at most; the rest are reachable through the village search.
+const MAX_CHART_VILLAGES = 15;
+
+// Approximate width of one character of the axis labels, in px, for fitting names under a bar.
+const LABEL_CHAR_WIDTH = 6.2;
+const LABEL_LINE_HEIGHT = 13;
+
+// Splits a name into at most maxLines lines of maxChars, ending with "…" if it does not fit.
+const wrapLabel = (text: string, maxChars: number, maxLines: number): string[] => {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(/\s+/)) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxChars) {
+      current = next;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+    if (lines.length === maxLines) break;
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+
+  const shown = lines.slice(0, maxLines);
+  const fullyShown = shown.join(" ").length >= text.length;
+  return shown.map((line, i) => {
+    const isLast = i === shown.length - 1;
+    if (line.length > maxChars) return `${line.slice(0, Math.max(1, maxChars - 1))}…`;
+    if (isLast && !fullyShown) return `${line.slice(0, Math.max(1, maxChars - 1))}…`;
+    return line;
+  });
+};
+
+// X-axis label: village name (up to two lines) with its taluka underneath, sized to the bar's width.
+const VillageTick = ({ x, y, payload, width, visibleTicksCount, chartData }: any) => {
+  const row = chartData.find((d: any) => d.name === payload.value);
+  const villageName: string = row?.villageName ?? payload.value;
+  const block: string = row?.block ?? "";
+  const bandWidth = width && visibleTicksCount ? width / visibleTicksCount : 80;
+  const maxChars = Math.max(4, Math.floor((bandWidth - 6) / LABEL_CHAR_WIDTH));
+  const nameLines = wrapLabel(villageName, maxChars, 2);
+  const blockLine = block ? wrapLabel(block, maxChars + 2, 1)[0] : "";
+
+  return (
+    <g transform={`translate(${x},${y + 4})`}>
+      <title>{block ? `${villageName} (${block})` : villageName}</title>
+      <text textAnchor="middle" fontSize={11} fontWeight={700} fill="#334155">
+        {nameLines.map((line, i) => (
+          <tspan key={i} x={0} dy={i === 0 ? 10 : LABEL_LINE_HEIGHT}>
+            {line}
+          </tspan>
+        ))}
+        {blockLine && (
+          <tspan x={0} dy={LABEL_LINE_HEIGHT} fontSize={10} fontWeight={500} fill="#94A3B8">
+            {blockLine}
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+};
+
+const DIMENSION_TITLES = {
+  status: "Overall Malnutrition (Normal vs MAM vs SAM)",
+  waz: "Underweight Distribution (Weight-for-Age)",
+  whz: "Acute Wasting Distribution (Weight-for-Height)",
+  haz: "Chronic Stunting Distribution (Height-for-Age)",
+};
+
+export default function VillageStackedBarChart({
+  villages,
+  activeDimension,
+  talukaName,
+  selectedVillage,
+  onSelectVillage,
+  isExpanded = false,
+  onToggleExpand,
+  isCollapsed = false,
+  onToggleCollapse,
+}: Props) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Senior Dev Optimization: Single O(N) pass to filter active villages, transform chart data,
+  // and compute severe hotspots, memoized to preserve object references and prevent Recharts re-render thrashing.
+  const { chartData, totalSevere, activeVillageCount } = useMemo(() => {
+    const chart: Array<{
+      name: string;
+      village: string;
+      villageName: string;
+      block: string;
+      sector: string;
+      total: number;
+      normal: number;
+      moderate: number;
+      severe: number;
+    }> = [];
+    let severeSum = 0;
+
+    for (let i = 0; i < villages.length; i++) {
+      const v = villages[i];
+      if (v.totalChildren <= 0) continue;
+
+      let normal = v.normalCount;
+      let moderate = v.mamCount;
+      let severe = v.samCount;
+
+      if (activeDimension === "waz") {
+        normal = v.wazNormal;
+        moderate = v.wazModerate;
+        severe = v.wazSevere;
+      } else if (activeDimension === "whz") {
+        normal = v.whzNormal;
+        moderate = v.whzModerate;
+        severe = v.whzSevere;
+      } else if (activeDimension === "haz") {
+        normal = v.hazNormal;
+        moderate = v.hazModerate;
+        severe = v.hazSevere;
+      }
+
+      severeSum += severe;
+
+      chart.push({
+        name: v.village,
+        village: v.village,
+        villageName: v.villageName,
+        block: v.block,
+        sector: v.sector,
+        total: v.totalChildren,
+        normal,
+        moderate,
+        severe,
+      });
+    }
+
+    // A district can have over a thousand villages; chart only the worst-affected ones.
+    chart.sort((a, b) => b.severe - a.severe || b.moderate - a.moderate);
+    return { chartData: chart.slice(0, MAX_CHART_VILLAGES), totalSevere: severeSum, activeVillageCount: chart.length };
+  }, [villages, activeDimension]);
+
+  const isTruncated = activeVillageCount > chartData.length;
+
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Village-Wise Stacked Distribution
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Showing: <strong className="text-slate-800">{DIMENSION_TITLES[activeDimension]}</strong> across {talukaName}
+            </p>
+            {isTruncated && (
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Top {chartData.length} of {activeVillageCount} villages by severe cases. Use the village search below to find any other village.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {totalSevere > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                <span>{totalSevere} Severe Hotspots</span>
+              </span>
+            )}
+
+            {/* Expand / Maximize Width Button */}
+            {onToggleExpand && (
+              <button
+                onClick={onToggleExpand}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition border border-slate-200 cursor-pointer"
+                title={isExpanded ? "Restore standard 8-column layout" : "Expand chart across full width (12 columns)"}
+              >
+                {isExpanded ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Compact</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Expand</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Collapse / Unfold Toggle Button */}
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition border border-slate-200 cursor-pointer"
+                title={isCollapsed ? "Show Chart View" : "Hide Chart View"}
+              >
+                {isCollapsed ? (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Open</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Hide</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!isCollapsed && (
+          <>
+            {/* Legend Pills & Drill-down Helper */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 pb-2">
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Normal / Healthy
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-amber-500"></span> Moderate (MAM / -2 SD)
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-3 h-3 rounded-full bg-rose-500"></span> Severe (SAM / -3 SD)
+            </span>
+          </div>
+        </div>
+
+        {/* Chart Canvas */}
+        {/* Fits the card width (at most MAX_CHART_VILLAGES bars), so the tooltip never lands in a scrolled-off area. */}
+        <div className="w-full pt-2 cursor-pointer">
+        {!isMounted ? (
+          <div className="w-full h-72 flex items-center justify-center bg-slate-50 rounded-2xl animate-pulse text-xs text-slate-400">
+            Rendering Village Stacked Bars...
+          </div>
+        ) : (
+          <div style={{ width: "100%", height: "320px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                onClick={(e: any) => {
+                  if (e && e.activePayload && e.activePayload.length) {
+                    const clickedVillage = e.activePayload[0].payload.village;
+                    onSelectVillage(clickedVillage);
+                  }
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <XAxis
+                  dataKey="name"
+                  tick={(props: any) => <VillageTick {...props} chartData={chartData} />}
+                  interval={0}
+                  // Two lines of village name plus the taluka line.
+                  height={58}
+                  stroke="#CBD5E1"
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  stroke="#CBD5E1"
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  // Recharts' default hover highlight is a mid-grey block; a faint tint is enough to show the column.
+                  cursor={{ fill: "#F1F5F9" }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const d = payload[0].payload;
+                      return (
+                        <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-700 text-xs space-y-1.5 z-50">
+                          <div className="font-bold text-sm text-slate-100 flex items-center justify-between gap-4">
+                            <span>{d.village}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">Sector: {d.sector}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 font-medium pb-1 border-b border-slate-800">
+                            Total Children: <strong className="text-white">{d.total}</strong>
+                          </p>
+                          <div className="flex items-center justify-between gap-4 text-emerald-400">
+                            <span>🟢 Healthy:</span>
+                            <strong className="font-mono">{d.normal} ({d.total > 0 ? Math.round((d.normal / d.total) * 100) : 0}%)</strong>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-amber-400">
+                            <span>🟡 Moderate:</span>
+                            <strong className="font-mono">{d.moderate} ({d.total > 0 ? Math.round((d.moderate / d.total) * 100) : 0}%)</strong>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-rose-400">
+                            <span>🔴 Severe:</span>
+                            <strong className="font-mono">{d.severe} ({d.total > 0 ? Math.round((d.severe / d.total) * 100) : 0}%)</strong>
+                          </div>
+                          <p className="text-[10px] text-blue-300 pt-1 border-t border-slate-800 italic">
+                            Click to view {d.village} child table &darr;
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar
+                  dataKey="normal"
+                  name="Normal"
+                  stackId="a"
+                  fill="#10B981"
+                  radius={[0, 0, 0, 0]}
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
+                <Bar
+                  dataKey="moderate"
+                  name="Moderate"
+                  stackId="a"
+                  fill="#F59E0B"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
+                <Bar
+                  dataKey="severe"
+                  name="Severe"
+                  stackId="a"
+                  fill="#EF4444"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </>
+  )}
+</div>
+
+{!isCollapsed && (
+  <div className="pt-3 border-t border-slate-100">
+    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+      <span>Click any bar above to inspect individual child records below</span>
+      {selectedVillage && (
+        <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+          Showing: {selectedVillage}
+        </span>
+      )}
+    </div>
+  </div>
+)}
+</div>
+);
+}
