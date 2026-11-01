@@ -73,6 +73,31 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
   },
 ];
 
+const RADIAN = Math.PI / 180;
+
+// Senior Dev Optimization: Static donut label renderer avoids creating closure functions inside .map() on every render
+const renderDonutLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+  const pct = Math.round(Number(percent || 0) * 100);
+  if (pct < 5) return null; // Hide if slice is too narrow to fit label legibly
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#ffffff"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={12}
+      fontWeight={700}
+    >
+      {`${pct}%`}
+    </text>
+  );
+};
+
 export default function MasterDonutChart({
   totalChildren,
   dimensions,
@@ -147,10 +172,10 @@ export default function MasterDonutChart({
             <div
               key={dim.key}
               onClick={() => onDimensionChange(dim.key)}
-              className={`rounded-2xl border p-4.5 transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:-translate-y-0.5 ${
+              className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer flex flex-col justify-between group ${
                 isActive
-                  ? "bg-gradient-to-b from-blue-50/50 via-white to-white border-blue-600 shadow-md ring-2 ring-blue-500/20"
-                  : "bg-white border-slate-200/90 hover:border-blue-300 hover:shadow-sm"
+                  ? "border-blue-600 shadow-md ring-2 ring-blue-500/25"
+                  : "border-slate-200/90 hover:border-blue-400 hover:shadow-sm"
               }`}
             >
               {/* Card Header */}
@@ -192,8 +217,8 @@ export default function MasterDonutChart({
                 </p>
               </div>
 
-              {/* Donut Chart Canvas with Sculpted Center & Sleek Ring */}
-              <div className="relative w-full h-[200px] my-1 flex items-center justify-center">
+              {/* Donut Chart Canvas with Arc Percentages & Center Total */}
+              <div className="relative w-full h-[220px] my-2 flex items-center justify-center">
                 {!isMounted ? (
                   <div className="w-32 h-32 rounded-full border-4 border-slate-100 animate-pulse"></div>
                 ) : (
@@ -203,14 +228,14 @@ export default function MasterDonutChart({
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius="64%"
-                        outerRadius="88%"
-                        paddingAngle={data.moderate > 0 || data.severe > 0 ? 2.5 : 0}
-                        cornerRadius={3}
+                        innerRadius="48%"
+                        outerRadius="94%"
+                        paddingAngle={1.5}
                         dataKey="value"
                         labelLine={false}
+                        label={renderDonutLabel}
                         isAnimationActive={true}
-                        animationDuration={500}
+                        animationDuration={600}
                         stroke="#ffffff"
                         strokeWidth={2}
                       >
@@ -219,17 +244,9 @@ export default function MasterDonutChart({
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{
-                          fontSize: 12,
-                          borderRadius: 12,
-                          backgroundColor: "#0F172A",
-                          borderColor: "#334155",
-                          color: "#F8FAFC",
-                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-                        }}
-                        itemStyle={{ color: "#F8FAFC", fontWeight: 600 }}
+                        contentStyle={{ fontSize: 12, borderRadius: 10 }}
                         formatter={(val, name) => [
-                          `${Number(val).toLocaleString()} children (${evaluated > 0 ? ((Number(val) * 100) / evaluated).toFixed(1) : 0}%)`,
+                          `${Number(val).toLocaleString()} (${evaluated > 0 ? ((Number(val) * 100) / evaluated).toFixed(1) : 0}%)`,
                           String(name),
                         ]}
                       />
@@ -237,52 +254,15 @@ export default function MasterDonutChart({
                   </ResponsiveContainer>
                 )}
 
-                {/* Polished Center Hub */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[100px] h-[100px] rounded-full bg-slate-50/90 border border-slate-200/70 shadow-xs flex flex-col items-center justify-center text-center p-1">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none">
-                      COHORT
-                    </span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tight leading-tight mt-1">
+                {/* Center Hole Callout */}
+                <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
+                  <div>
+                    <div className="font-display text-[26px] font-black text-slate-900 tabular-nums leading-none">
                       {Number(evaluated).toLocaleString()}
-                    </span>
-                    <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full mt-1 border border-emerald-300/50 leading-none">
-                      {evaluated > 0 ? Math.round((data.normal / evaluated) * 100) : 0}% Normal
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Finishing Touch: Crisp 3-Part Micro-Pill Metric Row */}
-              <div className="grid grid-cols-3 gap-1.5 pt-2.5 border-t border-slate-100 mt-1">
-                <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-xl py-1 px-1 text-center">
-                  <div className="text-[10px] font-bold text-emerald-800">Normal</div>
-                  <div className="font-extrabold text-xs text-emerald-950 font-mono">
-                    {evaluated > 0 ? Math.round((data.normal / evaluated) * 100) : 0}%
-                  </div>
-                </div>
-
-                <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl py-1 px-1 text-center">
-                  <div className="text-[10px] font-bold text-amber-800">MAM</div>
-                  <div className="font-extrabold text-xs text-amber-950 font-mono">
-                    {evaluated > 0 ? Math.round((data.moderate / evaluated) * 100) : 0}%
-                  </div>
-                </div>
-
-                <div
-                  className={`border rounded-xl py-1 px-1 text-center ${
-                    data.severe > 0 ? "bg-rose-50 border-rose-200 shadow-xs" : "bg-slate-50 border-slate-200/60"
-                  }`}
-                >
-                  <div className={`text-[10px] font-bold ${data.severe > 0 ? "text-rose-800" : "text-slate-400"}`}>
-                    SAM
-                  </div>
-                  <div
-                    className={`font-extrabold text-xs font-mono ${
-                      data.severe > 0 ? "text-rose-950" : "text-slate-400"
-                    }`}
-                  >
-                    {evaluated > 0 ? Math.round((data.severe / evaluated) * 100) : 0}%
+                    </div>
+                    <div className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
+                      COHORT
+                    </div>
                   </div>
                 </div>
               </div>
