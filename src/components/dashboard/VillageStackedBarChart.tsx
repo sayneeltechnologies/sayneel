@@ -263,9 +263,41 @@ export default function VillageStackedBarChart({
                     return null;
                   }}
                 />
-                <Bar dataKey="normal" name="Normal" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="moderate" name="Moderate" stackId="a" fill="#F59E0B" />
-                <Bar dataKey="severe" name="Severe" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="normal"
+                  name="Normal"
+                  stackId="a"
+                  fill="#10B981"
+                  radius={[0, 0, 0, 0]}
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
+                <Bar
+                  dataKey="moderate"
+                  name="Moderate"
+                  stackId="a"
+                  fill="#F59E0B"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
+                <Bar
+                  dataKey="severe"
+                  name="Severe"
+                  stackId="a"
+                  fill="#EF4444"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    const v = data?.village || data?.name;
+                    if (v) onSelectVillage(v);
+                  }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -276,13 +308,51 @@ export default function VillageStackedBarChart({
 </div>
 
 {!isCollapsed && (
-  <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 flex items-center justify-between">
-    <span>Click any bar to drill down directly to that village's children</span>
-    {selectedVillage && (
-      <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-        Selected: {selectedVillage}
+  <div className="pt-3 border-t border-slate-100 space-y-2.5">
+    {/* Interactive Village Drilldown Selection Bar */}
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+        <ArrowDownRight className="w-3.5 h-3.5 text-blue-600" />
+        Select Village:
       </span>
-    )}
+      {displayedVillages.map((v) => {
+        const isSelected = selectedVillage === v.village;
+        return (
+          <button
+            key={v.village}
+            type="button"
+            onClick={() => onSelectVillage(v.village)}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+              isSelected
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300"
+                : "bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200"
+            }`}
+            title={`Click to view ${v.village} child clinical table`}
+          >
+            <span>{v.village}</span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                isSelected ? "bg-blue-800 text-white" : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {v.totalChildren}
+            </span>
+            {v.samCount > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" title={`${v.samCount} SAM`} />
+            )}
+          </button>
+        );
+      })}
+    </div>
+
+    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+      <span>Click any bar or village button above to inspect individual child records below</span>
+      {selectedVillage && (
+        <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+          Showing: {selectedVillage}
+        </span>
+      )}
+    </div>
   </div>
 )}
 </div>

@@ -300,14 +300,34 @@ export default function BdoDashboardPage() {
             />
           </div>
         ) : (
-          <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-5 text-center shadow-xs">
-            <p className="text-xs text-slate-700 font-bold flex items-center justify-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>Child Clinical Table Minimized (On-Demand)</span>
+          <div id="village-child-roster" className="bg-white border border-dashed border-slate-300 rounded-3xl p-6 text-center shadow-xs">
+            <p className="text-sm text-slate-800 font-bold flex items-center justify-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span>Child Clinical Table (Loaded On-Demand to Conserve API Calls)</span>
             </p>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
-              To reduce API calls, child records are fetched only when you click on a specific village bar above.
+            <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
+              Select any village below or click a bar on the chart above to load its individual child growth registry and Z-score assessments:
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-3xl mx-auto">
+              {villages
+                .filter((v) => v.totalChildren > 0)
+                .map((v) => (
+                  <button
+                    key={v.village}
+                    type="button"
+                    onClick={() => handleVillageSelect(v.village)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>{v.village}</span>
+                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-md font-mono">
+                      {v.totalChildren}
+                    </span>
+                    {v.samCount > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-rose-500" title={`${v.samCount} SAM Hotspots`} />
+                    )}
+                  </button>
+                ))}
+            </div>
           </div>
         )}
       </div>

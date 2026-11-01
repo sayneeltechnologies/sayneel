@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users,
   Search,
@@ -69,9 +69,18 @@ export default function VillageChildRosterTable({
   const [filter, setFilter] = useState<"ALL" | "SAM" | "MAM" | "NORMAL">("ALL");
   const [search, setSearch] = useState("");
   const [reportModalChild, setReportModalChild] = useState<any | null>(null);
+  // Client-side cache to eliminate redundant API calls when switching between villages
+  const cacheRef = useRef<Record<string, ChildRecord[]>>({});
 
   useEffect(() => {
     if (!villageName || !blockId) return;
+
+    const cacheKey = `${blockId}_${villageName}`;
+    if (cacheRef.current[cacheKey]) {
+      setChildren(cacheRef.current[cacheKey]);
+      setLoading(false);
+      return;
+    }
 
     const fetchChildren = async () => {
       setLoading(true);
@@ -80,7 +89,9 @@ export default function VillageChildRosterTable({
           `/api/dashboard/bdo/children?village=${encodeURIComponent(villageName)}&block_id=${blockId}`
         );
         const data = await res.json();
-        setChildren(data.children || []);
+        const records = data.children || [];
+        cacheRef.current[cacheKey] = records;
+        setChildren(records);
       } catch (err) {
         console.error("Failed to fetch village children:", err);
       } finally {
