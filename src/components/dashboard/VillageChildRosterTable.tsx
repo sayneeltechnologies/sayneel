@@ -229,6 +229,16 @@ export default function VillageChildRosterTable({
             <Download className="w-4 h-4" />
             <span>Export Roster CSV</span>
           </button>
+
+          {onClearVillageFilter && (
+            <button
+              onClick={onClearVillageFilter}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition cursor-pointer"
+              title="Close Child Roster"
+            >
+              <span>✕ Close Table</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -87,27 +87,42 @@ export default function MasterDonutChart({
   }, []);
 
   return (
-    <div className="w-full space-y-3">
-      {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
+    <div className="w-full space-y-4">
+      {/* Section Header with Unified Master Legend */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <span>WHO Clinical Growth Standards &mdash; 4 Dimensions</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              Side-by-Side Overview
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-black text-slate-900 tracking-tight">
+              WHO Clinical Growth Standards &mdash; 4 Dimensions
+            </h3>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+              {talukaName} Taluka
             </span>
-          </h3>
-          <p className="text-xs text-slate-500">
-            Click any pie chart below to inspect its village-wise stacked distribution in Tier 2
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Select any dimension to inspect breakdown by village. Standard WHO Z-Score classification applied.
           </p>
         </div>
 
-        <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 self-start sm:self-auto">
-          {talukaName} Taluka
-        </span>
+        {/* Unified Master Legend (Single source of truth) */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 text-xs">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Legend:</span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-semibold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span>Normal / Healthy</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/60 font-semibold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+            <span>Moderate (MAM / -2 SD)</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200/60 font-semibold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
+            <span>Severe (SAM / -3 SD)</span>
+          </div>
+        </div>
       </div>
 
-      {/* 4 Pie / Donut Charts Side-by-Side Grid */}
+      {/* 4 Pie / Donut Charts Side-by-Side Grid with Expanded Charts */}
       <div
         className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         style={{
@@ -138,8 +153,8 @@ export default function MasterDonutChart({
               onClick={() => onDimensionChange(dim.key)}
               className={`p-4 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between group ${
                 isActive
-                  ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-500/30"
-                  : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                  ? "bg-white border-blue-600 shadow-lg ring-2 ring-blue-500/30"
+                  : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-md"
               }`}
             >
               {/* Card Header */}
@@ -147,9 +162,9 @@ export default function MasterDonutChart({
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition ${
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition ${
                         isActive
-                          ? "bg-blue-600 text-white"
+                          ? "bg-blue-600 text-white shadow-xs"
                           : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600"
                       }`}
                     >
@@ -166,25 +181,25 @@ export default function MasterDonutChart({
                   </div>
 
                   {isActive ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
-                      <CheckCircle2 className="w-3 h-3" /> Active
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 text-white shadow-xs">
+                      <CheckCircle2 className="w-3 h-3" /> Selected
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 transition">
-                      Select &rarr;
+                      View &rarr;
                     </span>
                   )}
                 </div>
 
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug line-clamp-1">
+                <p className="text-[11px] text-slate-500 mt-1 leading-snug line-clamp-1">
                   {dim.subtitle}
                 </p>
               </div>
 
-              {/* Donut Chart Canvas */}
-              <div className="relative w-full h-32 my-1 flex items-center justify-center">
+              {/* Enlarged Donut Chart Canvas (Height increased to h-48 ~ 192px) */}
+              <div className="relative w-full h-48 my-2 flex items-center justify-center">
                 {!isMounted ? (
-                  <div className="w-20 h-20 rounded-full border-4 border-slate-100 animate-pulse"></div>
+                  <div className="w-28 h-28 rounded-full border-4 border-slate-100 animate-pulse"></div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -192,8 +207,8 @@ export default function MasterDonutChart({
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={36}
-                        outerRadius={50}
+                        innerRadius={50}
+                        outerRadius={72}
                         paddingAngle={3}
                         dataKey="value"
                         isAnimationActive={true}
@@ -220,58 +235,45 @@ export default function MasterDonutChart({
                   </ResponsiveContainer>
                 )}
 
-                {/* Center Hole Callout */}
+                {/* Center Hole Callout - Kept COHORT jargon as requested */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-lg font-black text-slate-900 tracking-tight leading-none">
+                  <span className="text-2xl font-black text-slate-900 tracking-tight leading-none">
                     {evaluated}
                   </span>
-                  <span className="text-[8px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
-                    Cohort
+                  <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
+                    COHORT
                   </span>
                 </div>
               </div>
 
-              {/* Status Breakdown Legend Rows */}
-              <div className="space-y-1 pt-2 border-t border-slate-100 text-[11px]">
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Normal
+              {/* Compact 3-Pill Stats Strip (Space-efficient, no repeated full-line text) */}
+              <div className="grid grid-cols-3 gap-1.5 pt-3 border-t border-slate-100">
+                <div className="flex flex-col items-center justify-center bg-emerald-50/70 border border-emerald-100 rounded-xl py-1.5 px-1">
+                  <span className="text-[10px] font-bold text-emerald-800">
+                    {data.normal}
                   </span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {data.normal} <span className="text-[10px] text-slate-400 font-normal">({normPct}%)</span>
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span> Moderate
-                  </span>
-                  <span className="font-mono font-bold text-amber-700">
-                    {data.moderate} <span className="text-[10px] text-slate-400 font-normal">({modPct}%)</span>
+                  <span className="text-[9px] text-emerald-600 font-semibold">
+                    {normPct}% Normal
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-rose-500"></span> Severe
+                <div className="flex flex-col items-center justify-center bg-amber-50/70 border border-amber-100 rounded-xl py-1.5 px-1">
+                  <span className="text-[10px] font-bold text-amber-800">
+                    {data.moderate}
                   </span>
-                  <span className={`font-mono font-bold ${data.severe > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
-                    {data.severe} <span className="text-[10px] text-slate-400 font-normal">({sevPct}%)</span>
+                  <span className="text-[9px] text-amber-600 font-semibold">
+                    {modPct}% Mod.
                   </span>
                 </div>
-              </div>
 
-              {/* Action Indicator Footer */}
-              <div className="pt-2 mt-1.5 border-t border-slate-100 flex items-center justify-center text-center">
-                {isActive ? (
-                  <span className="text-[10px] font-bold text-blue-700 flex items-center gap-1">
-                    <span>Showing on Village Chart below</span> &darr;
+                <div className="flex flex-col items-center justify-center bg-rose-50/70 border border-rose-100 rounded-xl py-1.5 px-1">
+                  <span className={`text-[10px] font-bold ${data.severe > 0 ? "text-rose-700 font-black" : "text-slate-400"}`}>
+                    {data.severe}
                   </span>
-                ) : (
-                  <span className="text-[10px] font-medium text-slate-400 group-hover:text-blue-600 transition">
-                    Click to view village breakdown
+                  <span className="text-[9px] text-rose-600 font-semibold">
+                    {sevPct}% Sev.
                   </span>
-                )}
+                </div>
               </div>
             </div>
           );

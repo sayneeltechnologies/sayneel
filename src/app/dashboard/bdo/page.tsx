@@ -62,6 +62,7 @@ export default function BdoDashboardPage() {
   // Progressive Drill-down state
   const [activeDimension, setActiveDimension] = useState<GrowthDimension>("status");
   const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
+  const [showVillageBreakdown, setShowVillageBreakdown] = useState<boolean>(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
@@ -93,16 +94,10 @@ export default function BdoDashboardPage() {
         setKpi(data.kpi);
         setVillages(data.villages || []);
 
-        // Default to first village if none selected
-        if (data.villages && data.villages.length > 0) {
-          setSelectedVillage((prev) =>
-            prev && data.villages.some((v: any) => v.village === prev)
-              ? prev
-              : data.villages[0].village
-          );
-        } else {
-          setSelectedVillage(null);
-        }
+        // Do not auto-select village on initial load to prevent unnecessary child API calls
+        setSelectedVillage((prev) =>
+          prev && data.villages?.some((v: any) => v.village === prev) ? prev : null
+        );
       }
     } catch (err) {
       console.error("Failed to load dashboard data from PostgreSQL:", err);
@@ -126,10 +121,32 @@ export default function BdoDashboardPage() {
     router.push("/login");
   };
 
+  const handleDimensionChange = (dim: GrowthDimension) => {
+    setActiveDimension(dim);
+    setShowVillageBreakdown(true);
+    // Smooth scroll down to village distribution section
+    setTimeout(() => {
+      const el = document.getElementById("village-distribution-tier");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+  };
+
   const handleVillageSelect = (villageName: string) => {
     setSelectedVillage(villageName);
     // Smooth scroll down to the child roster table
-    const el = document.getElementById("village-child-roster");
+    setTimeout(() => {
+      const el = document.getElementById("village-child-roster");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+  };
+
+  const handleClearVillageFilter = () => {
+    setSelectedVillage(null);
+    const el = document.getElementById("village-distribution-tier");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
@@ -205,7 +222,7 @@ export default function BdoDashboardPage() {
               totalChildren={kpi.totalChildren}
               dimensions={kpi.dimensions}
               activeDimension={activeDimension}
-              onDimensionChange={(dim) => setActiveDimension(dim)}
+              onDimensionChange={handleDimensionChange}
               talukaName={activeBlockName}
             />
           </div>
@@ -213,27 +230,51 @@ export default function BdoDashboardPage() {
 
         {/* ==================== TIER 2: VILLAGE STACKED BAR CHART + VACCINATION METER ==================== */}
         {villages.length > 0 && kpi && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            {/* Village-Wise Stacked Bar Chart (8 cols) */}
-            <div className="lg:col-span-8">
-              <VillageStackedBarChart
-                villages={villages}
-                activeDimension={activeDimension}
-                talukaName={activeBlockName}
-                selectedVillage={selectedVillage}
-                onSelectVillage={handleVillageSelect}
-              />
+          <div id="village-distribution-tier" className="space-y-4 scroll-mt-6">
+            <div className="flex items-center justify-between bg-white px-5 py-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 leading-tight">
+                    Tier 2 &mdash; Village-Wise Stacked Distribution &amp; Immunisation Coverage
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Showing distribution for <strong>{activeDimension.toUpperCase()}</strong> across {villages.filter((v) => v.totalChildren > 0).length} active villages
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowVillageBreakdown(!showVillageBreakdown)}
+                className="text-xs font-bold text-blue-700 hover:text-blue-900 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition cursor-pointer"
+              >
+                {showVillageBreakdown ? "Collapse Breakdown ▲" : "Expand Breakdown ▼"}
+              </button>
             </div>
 
-            {/* Vaccination Meter (4 cols) */}
-            <div className="lg:col-span-4 flex flex-col justify-between">
-              <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
-            </div>
+            {showVillageBreakdown && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                {/* Village-Wise Stacked Bar Chart (8 cols) */}
+                <div className="lg:col-span-8">
+                  <VillageStackedBarChart
+                    villages={villages}
+                    activeDimension={activeDimension}
+                    talukaName={activeBlockName}
+                    selectedVillage={selectedVillage}
+                    onSelectVillage={handleVillageSelect}
+                  />
+                </div>
+
+                {/* Vaccination Meter (4 cols) */}
+                <div className="lg:col-span-4 flex flex-col justify-between">
+                  <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* ==================== TIER 3: DIRECT VILLAGE CHILD CLINICAL TABLE ==================== */}
-        {selectedVillage && (
+        {/* ==================== TIER 3: ON-DEMAND VILLAGE CHILD CLINICAL TABLE ==================== */}
+        {selectedVillage ? (
           <div className="w-full">
             <VillageChildRosterTable
               villageName={selectedVillage}
@@ -241,11 +282,17 @@ export default function BdoDashboardPage() {
               blockId={selectedBlockId}
               allVillages={villages.map((v) => ({ village: v.village, totalChildren: v.totalChildren }))}
               onSelectVillage={handleVillageSelect}
-              onClearVillageFilter={() => {
-                // Scroll back up to Tier 2
-                window.scrollTo({ top: 350, behavior: "smooth" });
-              }}
+              onClearVillageFilter={handleClearVillageFilter}
             />
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-blue-50/60 via-slate-50 to-indigo-50/60 border border-dashed border-blue-200 rounded-3xl p-6 text-center shadow-xs">
+            <p className="text-sm text-slate-700 font-bold">
+              Village Child Roster is Lazy-Loaded (On-Demand)
+            </p>
+            <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+              To minimize unnecessary API requests and reduce bandwidth, individual child records are fetched only when you click on a specific village bar or village selector above.
+            </p>
           </div>
         )}
       </div>
