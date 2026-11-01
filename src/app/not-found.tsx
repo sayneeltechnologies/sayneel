@@ -11,10 +11,10 @@ export default function NotFound() {
         The requested portal page could not be located or may have been relocated.
       </p>
       <Link
-        href="/dashboard/bdo"
+        href="/dashboard"
         className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-lg transition"
       >
-        Return to BDO Dashboard
+        Return to Dashboard
       </Link>
     </div>
   );

@@ -1,64 +1,62 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield, Lock, User, ArrowRight, Building2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Lock, User, ArrowRight, AlertCircle } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
+import { LoginResponse, clearSession, getOfficialRole, saveSession } from "@/lib/auth";
+
+// API error codes -> message shown on the form. Unknown user and wrong password read the same,
+// so the form doesn't reveal which mobile numbers are registered.
+const LOGIN_ERRORS: Record<string, string> = {
+  user_not_found: "Invalid mobile number or password.",
+  invalid_credentials: "Invalid mobile number or password.",
+  user_not_active: "This account is not active. Please contact your administrator.",
+};
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState("bdo_haveli");
-  const [password, setPassword] = useState("bdo123");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const mobile = mobileNumber.trim();
+    if (!/^\d{10}$/.test(mobile)) {
+      setError("Enter a valid 10-digit mobile number.");
+      return;
+    }
+
     setLoading(true);
+    clearSession();
 
-    const cleanUser = username.trim().toLowerCase();
-    const cleanPass = password.trim();
+    try {
+      const login = await api.post<LoginResponse>("/auth/login", {
+        mobile_number: mobile,
+        password: password.trim(),
+      });
 
-    // Accept bdo_haveli, bdo, admin, or phone numbers
-    const isValidUser =
-      cleanUser === "bdo_haveli" ||
-      cleanUser === "bdo" ||
-      cleanUser === "admin" ||
-      cleanUser === "9876543210" ||
-      cleanUser === "9800000086" ||
-      cleanUser === "bdo@balsaathi.in";
-
-    const isValidPass = cleanPass === "bdo123" || cleanPass === "1234" || cleanPass === "123";
-
-    if (isValidUser && isValidPass) {
-      // Save user session
-      const bdoUser = {
-        name: "Dr. R. K. Patil",
-        role: "BDO",
-        roleLabel: "Block Development Officer (गट विकास अधिकारी)",
-        jurisdiction: "Bhudargad Taluka, District Kolhapur",
-        blockId: "bhudargad",
-        totalAwcs: 6,
-        totalChildren: 104,
-        loginTime: new Date().toISOString(),
-      };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("balsaathi_user", JSON.stringify(bdoUser));
+      const role = getOfficialRole(login.roles ?? []);
+      if (!role) {
+        setError("This account does not have access to the officer portal.");
+        setLoading(false);
+        return;
       }
-      
+
+      saveSession(login, role);
       // Use window.location.href for guaranteed hard redirect
-      window.location.href = "/dashboard/bdo";
-    } else {
-      setError("Invalid username or password. Please use username: bdo_haveli and password: bdo123");
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? LOGIN_ERRORS[err.message] ?? "Sign in failed. Please try again."
+          : "Could not reach the server. Please check your connection and try again."
+      );
       setLoading(false);
     }
-  };
-
-  const fillDemoCredentials = () => {
-    setUsername("bdo_haveli");
-    setPassword("bdo123");
-    setError("");
   };
 
   return (
@@ -79,14 +77,6 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 relative overflow-hidden">
-          {/* Top Role Indicator */}
-          <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200/60 mb-6 text-blue-900">
-            <Building2 className="w-5 h-5 text-blue-700 shrink-0" />
-            <div className="text-xs">
-              <span className="font-bold text-blue-800">Role: BDO (Block Development Officer)</span>
-              <span className="block text-slate-500">Taluka-level administrative dashboard access</span>
-            </div>
-          </div>
 
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Officer Sign In</h1>
           <p className="text-sm text-slate-500 mt-1 mb-6">
@@ -103,19 +93,22 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Officer Username / Mobile
+                Mobile Number
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <User className="w-4 h-4" />
                 </div>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="username"
+                  maxLength={10}
                   required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ""))}
                   className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition bg-slate-50/50 font-medium"
-                  placeholder="e.g. bdo_haveli or 9876543210"
+                  placeholder="10-digit mobile number"
                 />
               </div>
             </div>
@@ -130,6 +123,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -148,37 +142,12 @@ export default function LoginPage() {
                 <span>Signing In...</span>
               ) : (
                 <>
-                  <span>Sign In to BDO Dashboard</span>
+                  <span>Sign In to Dashboard</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
-
-          {/* Hardcoded Demo Credentials Helper Box */}
-          <div className="mt-6 pt-5 border-t border-slate-100 bg-amber-50/80 -mx-8 -mb-8 p-6 rounded-b-3xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-amber-700" />
-                Test Credentials (1-Click Auto-Fill)
-              </span>
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer"
-              >
-                Auto-Fill
-              </button>
-            </div>
-            <div className="text-xs text-amber-950/80 space-y-1 font-mono bg-white/70 p-2.5 rounded-lg border border-amber-200">
-              <div>
-                Username: <strong className="text-slate-900">bdo_haveli</strong> (or <strong>bdo</strong>)
-              </div>
-              <div>
-                Password: <strong className="text-slate-900">bdo123</strong>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Back Link */}

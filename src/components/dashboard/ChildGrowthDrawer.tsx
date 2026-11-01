@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
-import { API_ENDPOINTS } from "@/lib/api";
+import { api } from "@/lib/api";
 import {
   X,
   User,
@@ -109,9 +109,10 @@ export default function ChildGrowthDrawer({
     const fetchChildren = async () => {
       setLoading(true);
       try {
-        const res = await fetch(API_ENDPOINTS.awcChildren(awcId));
-        const data = await res.json();
-        setChildren(data.children || []);
+        const data = await api.get<{ children?: any[] }>("/dashboard/children", {
+          query: { awc_id: awcId },
+        });
+        setChildren(data?.children || []);
       } catch (err) {
         console.error("Failed to load children:", err);
       } finally {
@@ -133,9 +134,10 @@ export default function ChildGrowthDrawer({
     setExpandedChildId(childId);
     setHistoryLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.childGrowthHistory(childId));
-      const data = await res.json();
-      setChildHistory(data.history || []);
+      const data = await api.get<{ history?: HistoryItem[] }>("/dashboard/children", {
+        query: { child_id: childId },
+      });
+      setChildHistory(data?.history || []);
     } catch (err) {
       console.error("Failed to load child history:", err);
     } finally {
@@ -285,7 +287,7 @@ export default function ChildGrowthDrawer({
           {loading ? (
             <div className="h-64 flex flex-col items-center justify-center gap-3 text-slate-400">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-xs font-semibold">Loading child growth profiles from database...</span>
+              <span className="text-xs font-semibold">Loading child growth profiles...</span>
             </div>
           ) : filteredChildren.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-slate-400 text-xs">
@@ -482,7 +484,7 @@ export default function ChildGrowthDrawer({
                       {historyLoading ? (
                         <div className="py-6 text-center text-slate-400">
                           <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                          <span>Fetching timeline...</span>
+                          <span>Loading timeline...</span>
                         </div>
                       ) : childHistory.length === 0 ? (
                         <p className="text-slate-400 py-2">No historical records recorded yet.</p>

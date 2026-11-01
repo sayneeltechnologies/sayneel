@@ -14,7 +14,7 @@ interface Props {
     whz: { normal: number; moderate: number; severe: number };
     haz: { normal: number; moderate: number; severe: number };
   };
-  activeDimension: GrowthDimension;
+  activeDimension: GrowthDimension | null;
   onDimensionChange: (dim: GrowthDimension) => void;
   talukaName: string;
 }
@@ -121,7 +121,7 @@ export default function MasterDonutChart({
               WHO Clinical Growth Standards &mdash; 4 Dimensions
             </h3>
             <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              {talukaName} Taluka
+              {talukaName}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -168,11 +168,13 @@ export default function MasterDonutChart({
             { name: dim.severeLabel, value: data.severe, color: "#EF4444" },
           ];
 
+          // The whole card is the click target. Recharts puts an inline `cursor: default` on its wrapper,
+          // so the pointer is forced there too (! beats the inline style).
           return (
             <div
               key={dim.key}
               onClick={() => onDimensionChange(dim.key)}
-              className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer flex flex-col justify-between group ${
+              className={`bg-white rounded-2xl border p-[18px] transition-all cursor-pointer [&_.recharts-wrapper]:!cursor-pointer flex flex-col justify-between group ${
                 isActive
                   ? "border-blue-600 shadow-md ring-2 ring-blue-500/25"
                   : "border-slate-200/90 hover:border-blue-400 hover:shadow-sm"
@@ -201,13 +203,9 @@ export default function MasterDonutChart({
                     </div>
                   </div>
 
-                  {isActive ? (
+                  {isActive && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
                       <CheckCircle2 className="w-3 h-3" /> Selected
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-blue-600 transition">
-                      View &rarr;
                     </span>
                   )}
                 </div>
