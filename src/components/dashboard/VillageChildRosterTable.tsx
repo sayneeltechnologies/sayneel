@@ -158,45 +158,6 @@ export default function VillageChildRosterTable({
           <p className="text-xs text-slate-400 mt-0.5">
             Individual child measurements &amp; clinical WHO standard deviation indicators
           </p>
-
-          {/* Quick Village Switcher Pills */}
-          {allVillages && allVillages.length > 1 && onSelectVillage && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-800">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
-                Active Villages:
-              </span>
-              {allVillages.slice(0, 10).map((item) => {
-                const vName = typeof item === "string" ? item : item.village;
-                const vCount = typeof item === "object" ? item.totalChildren : undefined;
-                const isActive = vName === villageName;
-                return (
-                  <button
-                    key={vName}
-                    onClick={() => onSelectVillage(vName)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                      isActive
-                        ? "bg-amber-400 text-slate-950 shadow-md font-black ring-2 ring-amber-300"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60"
-                    }`}
-                  >
-                    <span>{vName}</span>
-                    {vCount !== undefined && (
-                      <span className={`text-[10px] px-1 py-0.2 rounded-full font-bold ${
-                        isActive ? "bg-slate-950/20 text-slate-950" : "bg-slate-700 text-slate-300"
-                      }`}>
-                        {vCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              {allVillages.length > 10 && (
-                <span className="text-[10px] text-slate-400 font-semibold italic ml-1">
-                  +{allVillages.length - 10} more in dropdown &rarr;
-                </span>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">

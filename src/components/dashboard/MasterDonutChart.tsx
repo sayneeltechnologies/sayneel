@@ -217,10 +217,10 @@ export default function MasterDonutChart({
                 </p>
               </div>
 
-              {/* Donut Chart Canvas with Arc Percentages & Center Total (from reference layout) */}
-              <div className="relative w-full h-[190px] my-1 flex items-center justify-center">
+              {/* Donut Chart Canvas with Arc Percentages & Center Total (Maximized & Clean) */}
+              <div className="relative w-full h-[220px] my-2 flex items-center justify-center">
                 {!isMounted ? (
-                  <div className="w-28 h-28 rounded-full border-4 border-slate-100 animate-pulse"></div>
+                  <div className="w-32 h-32 rounded-full border-4 border-slate-100 animate-pulse"></div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -228,8 +228,8 @@ export default function MasterDonutChart({
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius="46%"
-                        outerRadius="92%"
+                        innerRadius="48%"
+                        outerRadius="94%"
                         paddingAngle={1.5}
                         dataKey="value"
                         labelLine={false}
@@ -257,39 +257,15 @@ export default function MasterDonutChart({
                 {/* Center Hole Callout */}
                 <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
                   <div>
-                    <div className="font-display text-[22px] font-black text-slate-900 tabular-nums leading-none">
+                    <div className="font-display text-[26px] font-black text-slate-900 tabular-nums leading-none">
                       {Number(evaluated).toLocaleString()}
                     </div>
-                    <div className="text-[9.5px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
+                    <div className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
                       COHORT
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Exact Reference Legend Rows: Color Chip + Label + Count + Percentage */}
-              <ul className="mt-2 space-y-1 pt-2.5 border-t border-slate-100">
-                {chartData.map((u) => {
-                  const pct = evaluated > 0 ? (((u.value ?? 0) * 100) / evaluated).toFixed(1) : "0.0";
-                  return (
-                    <li key={u.name} className="flex items-center gap-2 text-[12px]">
-                      <i
-                        className="w-2.5 h-2.5 rounded-xs inline-block shrink-0"
-                        style={{ background: u.color }}
-                      />
-                      <span className="flex-1 text-slate-700 leading-tight font-medium truncate">
-                        {u.name}
-                      </span>
-                      <b className="tabular-nums text-slate-900 font-bold">
-                        {Number(u.value ?? 0).toLocaleString()}
-                      </b>
-                      <span className="tabular-nums text-slate-500 w-11 text-right text-[11px]">
-                        {pct}%
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
             </div>
           );
         })}
