@@ -81,7 +81,7 @@ export default function WhoGrowthReportModal({ isOpen, onClose, child }: Props) 
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const data = await api.get<{ history?: HistoryPoint[] }>("/dashboard/bdo/children", {
+        const data = await api.get<{ history?: HistoryPoint[] }>("/dashboard/children", {
           query: { child_id: child.id },
         });
         setHistory(data?.history || []);
@@ -247,7 +247,7 @@ export default function WhoGrowthReportModal({ isOpen, onClose, child }: Props) 
           {loading ? (
             <div className="h-72 flex flex-col items-center justify-center gap-3 text-slate-400">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-xs font-semibold">Generating WHO Spline Curves from database...</span>
+              <span className="text-xs font-semibold">Loading growth curves...</span>
             </div>
           ) : chartData.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs">

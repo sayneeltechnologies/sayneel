@@ -48,7 +48,7 @@ export default function LoginPage() {
 
       saveSession(login, role);
       // Use window.location.href for guaranteed hard redirect
-      window.location.href = "/dashboard/bdo";
+      window.location.href = "/dashboard";
     } catch (err) {
       setError(
         err instanceof ApiError

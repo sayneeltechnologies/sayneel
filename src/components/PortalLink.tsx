@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 
-const DASHBOARD_PATH = "/dashboard/bdo";
+const DASHBOARD_PATH = "/dashboard";
 
 // Link into the BalSaathi portal: goes to sign in, or — when already signed in — opens the
 // dashboard in a new tab (the session is in localStorage, so the new tab is signed in too).

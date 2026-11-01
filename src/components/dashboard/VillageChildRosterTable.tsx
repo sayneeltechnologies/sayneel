@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Search,
@@ -18,6 +18,8 @@ import {
   Calendar,
 } from "lucide-react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
+import TablePagination, { DEFAULT_PAGE_SIZE } from "./TablePagination";
+import VillagePicker, { VillageSearchResult } from "./VillagePicker";
 import { api } from "@/lib/api";
 
 export interface ChildRecord {
@@ -43,11 +45,6 @@ export interface ChildRecord {
   measuredDate: string | null;
 }
 
-export interface VillageOption {
-  village: string;
-  totalChildren?: number;
-}
-
 interface Props {
   // Shown in the header and village picker (e.g. "Kadgaon (Bhudargad)" in the All talukas view).
   villageName: string;
@@ -56,52 +53,150 @@ interface Props {
   // Full label, e.g. "Bhudargad Taluka".
   talukaName: string;
   blockId: string;
-  allVillages?: Array<string | VillageOption>;
-  onSelectVillage?: (villageName: string) => void;
+  // Switch to another village found through the header's search box.
+  onSelectVillage?: (village: VillageSearchResult) => void;
   onClearVillageFilter?: () => void;
 }
 
-// Module-level persistent cache across component unmounts
-export const villageChildrenCache = new Map<string, ChildRecord[]>();
-export const clearVillageChildrenCache = () => villageChildrenCache.clear();
+type StatusFilter = "ALL" | "SAM" | "MAM" | "NORMAL";
 
+interface ChildrenPage {
+  children: ChildRecord[];
+  // Children matching the status and search, across all pages.
+  totalCount: number;
+}
+
+interface StatusCounts {
+  total: number;
+  normal: number;
+  mam: number;
+  sam: number;
+}
+
+// The API's status filter value for each pill.
+const STATUS_PARAM: Record<StatusFilter, string | undefined> = { ALL: undefined, SAM: "sam", MAM: "mam", NORMAL: "normal" };
+
+// The search box waits for a pause in typing before asking the server.
+const SEARCH_DELAY_MS = 500;
+// Rows per request when exporting every matching child to CSV.
+const EXPORT_PAGE_SIZE = 100;
+
+// Module-level caches across component unmounts: pages already fetched, and each village's status totals
+// (fetched once per village). The dashboard's Refresh clears both.
+export const villageChildrenCache = new Map<string, ChildrenPage>();
+const villageCountsCache = new Map<string, StatusCounts>();
+export const clearVillageChildrenCache = () => {
+  villageChildrenCache.clear();
+  villageCountsCache.clear();
+};
+
+// Mount with a key per village (blockId + village), so switching villages starts from page 1 with no filter.
 export default function VillageChildRosterTable({
   villageName,
   queryVillage = villageName,
   talukaName,
   blockId,
-  allVillages = [],
   onSelectVillage,
   onClearVillageFilter,
 }: Props) {
   const [children, setChildren] = useState<ChildRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  // Null until the village's totals arrive; the pills show only their names meanwhile.
+  const [counts, setCounts] = useState<StatusCounts | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"ALL" | "SAM" | "MAM" | "NORMAL">("ALL");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [reportModalChild, setReportModalChild] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
+  const villageKey = `${blockId}_${queryVillage}`;
+
+  // Status totals for the pills: one request per village.
   useEffect(() => {
     if (!queryVillage || !blockId) return;
 
-    const cacheKey = `${blockId}_${queryVillage}`;
-    if (villageChildrenCache.has(cacheKey)) {
-      setChildren(villageChildrenCache.get(cacheKey) || []);
+    const cached = villageCountsCache.get(villageKey);
+    if (cached) {
+      setCounts(cached);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setCounts(null);
+    api
+      .get<StatusCounts>("/dashboard/children/counts", {
+        query: { village: queryVillage, block_id: blockId },
+        signal: abortController.signal,
+      })
+      .then((data) => {
+        if (!data) return;
+        villageCountsCache.set(villageKey, data);
+        setCounts(data);
+      })
+      .catch((err: any) => {
+        if (err.name !== "AbortError") console.error("Failed to fetch village child counts:", err);
+      });
+
+    return () => abortController.abort();
+  }, [queryVillage, blockId, villageKey]);
+
+  // Apply the search after a pause in typing, from the first page.
+  useEffect(() => {
+    const next = search.trim();
+    if (next === appliedSearch) return;
+    const timer = setTimeout(() => {
+      setAppliedSearch(next);
+      setPage(1);
+    }, SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [search, appliedSearch]);
+
+  // The current page of children, from the server.
+  useEffect(() => {
+    if (!queryVillage || !blockId) return;
+
+    const pageKey = `${villageKey}_${filter}_${appliedSearch}_${pageSize}_${page}`;
+    const cached = villageChildrenCache.get(pageKey);
+    if (cached) {
+      setChildren(cached.children);
+      setTotalCount(cached.totalCount);
       setLoading(false);
+      setHasLoaded(true);
       return;
     }
 
     const abortController = new AbortController();
 
-    const fetchChildren = async () => {
+    const fetchPage = async () => {
       setLoading(true);
       try {
-        const data = await api.get<{ children?: any[] }>("/dashboard/bdo/children", {
-          query: { village: queryVillage, block_id: blockId },
+        const data = await api.get<{ children?: ChildRecord[]; totalCount?: number }>("/dashboard/children", {
+          query: {
+            village: queryVillage,
+            block_id: blockId,
+            page,
+            page_size: pageSize,
+            status: STATUS_PARAM[filter],
+            search: appliedSearch || undefined,
+          },
           signal: abortController.signal,
         });
-        const records = data?.children || [];
-        villageChildrenCache.set(cacheKey, records);
-        setChildren(records);
+        const result = { children: data?.children || [], totalCount: data?.totalCount ?? 0 };
+
+        // The page can fall past the end if children were removed since the last request.
+        if (result.children.length === 0 && page > 1) {
+          setPage(1);
+          return;
+        }
+
+        villageChildrenCache.set(pageKey, result);
+        setChildren(result.children);
+        setTotalCount(result.totalCount);
+        setHasLoaded(true);
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error("Failed to fetch village children:", err);
@@ -113,49 +208,64 @@ export default function VillageChildRosterTable({
       }
     };
 
-    fetchChildren();
+    fetchPage();
 
     return () => {
       abortController.abort();
     };
-  }, [queryVillage, blockId]);
+  }, [queryVillage, blockId, villageKey, filter, appliedSearch, page, pageSize]);
 
-  // Senior dev optimization: Compute SAM, MAM, and Normal counts in a single O(N) pass
-  // instead of 3 separate .filter() passes
-  const { samCount, mamCount, normalCount } = useMemo(() => {
-    let sam = 0;
-    let mam = 0;
-    let normal = 0;
-    for (let i = 0; i < children.length; i++) {
-      const s = children[i].status;
-      if (s === 3) sam++;
-      else if (s === 2) mam++;
-      else if (s === 1) normal++;
+  const handleFilterChange = (next: StatusFilter) => {
+    setFilter(next);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const isUnfiltered = filter === "ALL" && !appliedSearch;
+
+  // Pill label: the name alone until the village's totals arrive.
+  const pillLabel = (name: string, count: number | undefined) => (count === undefined ? name : `${name} (${count})`);
+
+  // Every child matching the status and search, fetched in batches only when exporting.
+  const fetchAllMatching = async (): Promise<ChildRecord[]> => {
+    const all: ChildRecord[] = [];
+    for (let exportPage = 1; ; exportPage++) {
+      const data = await api.get<{ children?: ChildRecord[]; totalCount?: number }>("/dashboard/children", {
+        query: {
+          village: queryVillage,
+          block_id: blockId,
+          page: exportPage,
+          page_size: EXPORT_PAGE_SIZE,
+          status: STATUS_PARAM[filter],
+          search: appliedSearch || undefined,
+        },
+      });
+      const batch = data?.children || [];
+      all.push(...batch);
+      if (batch.length < EXPORT_PAGE_SIZE || all.length >= (data?.totalCount ?? 0)) return all;
     }
-    return { samCount: sam, mamCount: mam, normalCount: normal };
-  }, [children]);
+  };
 
-  // Senior dev optimization: Memoize filtered list so searching/filtering doesn't re-run needlessly
-  const filteredChildren = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return children.filter((c) => {
-      if (filter === "SAM" && c.status !== 3) return false;
-      if (filter === "MAM" && c.status !== 2) return false;
-      if (filter === "NORMAL" && c.status !== 1) return false;
-      if (!q) return true;
+  // CSV export covers every child matching the status and search, not just the current page.
+  const exportVillageCsv = async () => {
+    setExporting(true);
+    let exportChildren: ChildRecord[];
+    try {
+      exportChildren = await fetchAllMatching();
+    } catch (err) {
+      console.error("Failed to export village children:", err);
+      return;
+    } finally {
+      setExporting(false);
+    }
 
-      return (
-        c.name.toLowerCase().includes(q) ||
-        Boolean(c.motherName && c.motherName.toLowerCase().includes(q)) ||
-        c.awcName.toLowerCase().includes(q)
-      );
-    });
-  }, [children, filter, search]);
-
-  const exportVillageCsv = () => {
     const headers =
       "Child Name,Gender,Age,Mother Name,Weight (kg),Height (cm),WAZ Z-Score,WHZ Z-Score,HAZ Z-Score,WHO Status,AWC Center,Measured Date\n";
-    const rows = filteredChildren
+    const rows = exportChildren
       .map(
         (c) =>
           `"${c.name}","${c.gender}","${c.ageText}","${c.motherName || ""}","${c.weight || ""}","${c.height || ""}","${c.wfaZScore ?? ""}","${c.wfhZScore ?? ""}","${c.lhfaZScore ?? ""}","${c.statusLabel}","${c.awcName}","${c.measuredDate?.slice(0, 10) || ""}"`
@@ -176,9 +286,10 @@ export default function VillageChildRosterTable({
   };
 
   return (
-    <div id="village-child-roster" className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-6">
+    // No overflow-hidden on the outer box, so the village search results can drop out of the header.
+    <div id="village-child-roster" className="bg-white rounded-3xl border border-slate-200 shadow-sm scroll-mt-6">
       {/* ==================== SECTION HEADER & BREADCRUMB ==================== */}
-      <div className="p-6 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800">
+      <div className="relative z-10 p-6 bg-slate-900 text-white rounded-t-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800">
         <div>
           {/* Breadcrumb Navigation */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
@@ -191,9 +302,11 @@ export default function VillageChildRosterTable({
 
           <h3 className="text-xl font-black mt-1 text-white tracking-tight flex items-center gap-3">
             <span>{villageName} Village &mdash; Child Growth &amp; Z-Scores</span>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-              {children.length} Children Enrolled
-            </span>
+            {counts && (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {counts.total} Children Enrolled
+              </span>
+            )}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             Individual child measurements &amp; clinical WHO standard deviation indicators
@@ -201,34 +314,27 @@ export default function VillageChildRosterTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-          {/* Direct Dropdown Selector with all Taluka Villages */}
-          {allVillages && allVillages.length > 1 && onSelectVillage && (
-            <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 shadow-sm">
-              <span className="text-xs font-semibold text-slate-300">Village:</span>
-              <select
-                value={villageName}
-                onChange={(e) => onSelectVillage(e.target.value)}
-                className="bg-slate-900 text-amber-400 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer max-w-[200px]"
-              >
-                {allVillages.map((item) => {
-                  const vName = typeof item === "string" ? item : item.village;
-                  const vCount = typeof item === "object" ? item.totalChildren : undefined;
-                  return (
-                    <option key={vName} value={vName}>
-                      {vName} {vCount !== undefined ? `(${vCount} children)` : ""}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+          {/* Switch village by searching */}
+          {onSelectVillage && (
+            <VillagePicker
+              onSelectVillage={onSelectVillage}
+              placeholder="Switch village..."
+              variant="dark"
+              className="w-56"
+            />
           )}
 
           <button
             onClick={exportVillageCsv}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition cursor-pointer"
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition cursor-pointer disabled:opacity-60 disabled:cursor-wait"
           >
-            <Download className="w-4 h-4" />
-            <span>Export Roster CSV</span>
+            {exporting ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>{exporting ? "Exporting…" : "Export Roster CSV"}</span>
           </button>
 
           {onClearVillageFilter && (
@@ -243,22 +349,23 @@ export default function VillageChildRosterTable({
         </div>
       </div>
 
+      <div className="rounded-b-3xl overflow-hidden">
       {/* ==================== CONTROLS & STATUS FILTER PILLS ==================== */}
       <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
           <button
-            onClick={() => setFilter("ALL")}
+            onClick={() => handleFilterChange("ALL")}
             className={`px-3 py-1.5 rounded-xl border transition ${
               filter === "ALL"
                 ? "bg-slate-900 text-white border-slate-900 shadow-sm"
                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
             }`}
           >
-            All Children ({children.length})
+            {pillLabel("All Children", counts?.total)}
           </button>
 
           <button
-            onClick={() => setFilter("SAM")}
+            onClick={() => handleFilterChange("SAM")}
             className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition ${
               filter === "SAM"
                 ? "bg-rose-600 text-white border-rose-600 shadow-sm"
@@ -266,11 +373,11 @@ export default function VillageChildRosterTable({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-            SAM Red ({samCount})
+            {pillLabel("SAM Red", counts?.sam)}
           </button>
 
           <button
-            onClick={() => setFilter("MAM")}
+            onClick={() => handleFilterChange("MAM")}
             className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition ${
               filter === "MAM"
                 ? "bg-amber-600 text-white border-amber-600 shadow-sm"
@@ -278,11 +385,11 @@ export default function VillageChildRosterTable({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            MAM Warning ({mamCount})
+            {pillLabel("MAM Warning", counts?.mam)}
           </button>
 
           <button
-            onClick={() => setFilter("NORMAL")}
+            onClick={() => handleFilterChange("NORMAL")}
             className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition ${
               filter === "NORMAL"
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
@@ -290,7 +397,7 @@ export default function VillageChildRosterTable({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Healthy ({normalCount})
+            {pillLabel("Healthy", counts?.normal)}
           </button>
         </div>
 
@@ -308,21 +415,30 @@ export default function VillageChildRosterTable({
       </div>
 
       {/* ==================== CHILDREN TABULAR ROSTER ==================== */}
-      <div className="overflow-x-auto">
-        {loading ? (
+      {/* Later page loads keep the current rows, dimmed under a spinner. */}
+      <div className="relative overflow-x-auto" aria-busy={loading}>
+        {loading && hasLoaded && (
+          <div className="absolute inset-0 z-10 bg-white/60 flex items-start justify-center pt-16">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white shadow border border-slate-200 text-xs font-semibold text-slate-500">
+              <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+              Loading&hellip;
+            </div>
+          </div>
+        )}
+        {!hasLoaded ? (
           <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             <span className="text-xs font-semibold">Loading child growth profiles for {villageName}...</span>
           </div>
-        ) : filteredChildren.length === 0 ? (
+        ) : children.length === 0 ? (
           <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
             <Users className="w-10 h-10 text-slate-300 mx-auto mb-1" />
             <span className="font-bold text-slate-700 text-sm">
-              {children.length === 0
+              {isUnfiltered
                 ? `No children currently registered in ${villageName}`
                 : `No children match the active search or filter in ${villageName}`}
             </span>
-            {children.length === 0 && (
+            {isUnfiltered && (
               <p className="text-slate-400 max-w-md">
                 This village currently has 0 registered child growth profiles in the active cohort. You can select another village from the dropdown above to inspect child records.
               </p>
@@ -351,7 +467,7 @@ export default function VillageChildRosterTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredChildren.map((child) => (
+              {children.map((child) => (
                 <tr
                   key={child.id}
                   className={`hover:bg-slate-50/80 transition-colors ${
@@ -495,6 +611,18 @@ export default function VillageChildRosterTable({
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Stays up while a page loads, so the user can see where they are. */}
+      {hasLoaded && totalCount > 0 && (
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      )}
       </div>
 
       {/* ==================== WHO CLINICAL GROWTH MODAL ==================== */}

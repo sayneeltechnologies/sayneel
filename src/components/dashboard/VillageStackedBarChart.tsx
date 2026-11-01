@@ -10,11 +10,14 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { BarChart3, AlertCircle, ArrowDownRight, Maximize2, Minimize2, ChevronDown, ChevronUp } from "lucide-react";
+import { BarChart3, AlertCircle, Maximize2, Minimize2, ChevronDown, ChevronUp } from "lucide-react";
 import { GrowthDimension } from "./MasterDonutChart";
 
 interface VillageSummary {
+  // Label used as the village's key; includes the taluka in the All Talukas view.
   village: string;
+  villageName: string;
+  block: string;
   sector: string;
   awcIds: string[];
   awcCount: number;
@@ -45,6 +48,68 @@ interface Props {
   onToggleCollapse?: () => void;
 }
 
+// Bars shown at most; the rest are reachable through the village search.
+const MAX_CHART_VILLAGES = 15;
+
+// Approximate width of one character of the axis labels, in px, for fitting names under a bar.
+const LABEL_CHAR_WIDTH = 6.2;
+const LABEL_LINE_HEIGHT = 13;
+
+// Splits a name into at most maxLines lines of maxChars, ending with "…" if it does not fit.
+const wrapLabel = (text: string, maxChars: number, maxLines: number): string[] => {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(/\s+/)) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxChars) {
+      current = next;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+    if (lines.length === maxLines) break;
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+
+  const shown = lines.slice(0, maxLines);
+  const fullyShown = shown.join(" ").length >= text.length;
+  return shown.map((line, i) => {
+    const isLast = i === shown.length - 1;
+    if (line.length > maxChars) return `${line.slice(0, Math.max(1, maxChars - 1))}…`;
+    if (isLast && !fullyShown) return `${line.slice(0, Math.max(1, maxChars - 1))}…`;
+    return line;
+  });
+};
+
+// X-axis label: village name (up to two lines) with its taluka underneath, sized to the bar's width.
+const VillageTick = ({ x, y, payload, width, visibleTicksCount, chartData }: any) => {
+  const row = chartData.find((d: any) => d.name === payload.value);
+  const villageName: string = row?.villageName ?? payload.value;
+  const block: string = row?.block ?? "";
+  const bandWidth = width && visibleTicksCount ? width / visibleTicksCount : 80;
+  const maxChars = Math.max(4, Math.floor((bandWidth - 6) / LABEL_CHAR_WIDTH));
+  const nameLines = wrapLabel(villageName, maxChars, 2);
+  const blockLine = block ? wrapLabel(block, maxChars + 2, 1)[0] : "";
+
+  return (
+    <g transform={`translate(${x},${y + 4})`}>
+      <title>{block ? `${villageName} (${block})` : villageName}</title>
+      <text textAnchor="middle" fontSize={11} fontWeight={700} fill="#334155">
+        {nameLines.map((line, i) => (
+          <tspan key={i} x={0} dy={i === 0 ? 10 : LABEL_LINE_HEIGHT}>
+            {line}
+          </tspan>
+        ))}
+        {blockLine && (
+          <tspan x={0} dy={LABEL_LINE_HEIGHT} fontSize={10} fontWeight={500} fill="#94A3B8">
+            {blockLine}
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+};
+
 const DIMENSION_TITLES = {
   status: "Overall Malnutrition (Normal vs MAM vs SAM)",
   waz: "Underweight Distribution (Weight-for-Age)",
@@ -71,11 +136,12 @@ export default function VillageStackedBarChart({
 
   // Senior Dev Optimization: Single O(N) pass to filter active villages, transform chart data,
   // and compute severe hotspots, memoized to preserve object references and prevent Recharts re-render thrashing.
-  const { displayedVillages, chartData, totalSevere } = useMemo(() => {
-    const displayed: VillageSummary[] = [];
+  const { chartData, totalSevere, activeVillageCount } = useMemo(() => {
     const chart: Array<{
       name: string;
       village: string;
+      villageName: string;
+      block: string;
       sector: string;
       total: number;
       normal: number;
@@ -87,8 +153,6 @@ export default function VillageStackedBarChart({
     for (let i = 0; i < villages.length; i++) {
       const v = villages[i];
       if (v.totalChildren <= 0) continue;
-
-      displayed.push(v);
 
       let normal = v.normalCount;
       let moderate = v.mamCount;
@@ -113,6 +177,8 @@ export default function VillageStackedBarChart({
       chart.push({
         name: v.village,
         village: v.village,
+        villageName: v.villageName,
+        block: v.block,
         sector: v.sector,
         total: v.totalChildren,
         normal,
@@ -121,8 +187,12 @@ export default function VillageStackedBarChart({
       });
     }
 
-    return { displayedVillages: displayed, chartData: chart, totalSevere: severeSum };
+    // A district can have over a thousand villages; chart only the worst-affected ones.
+    chart.sort((a, b) => b.severe - a.severe || b.moderate - a.moderate);
+    return { chartData: chart.slice(0, MAX_CHART_VILLAGES), totalSevere: severeSum, activeVillageCount: chart.length };
   }, [villages, activeDimension]);
+
+  const isTruncated = activeVillageCount > chartData.length;
 
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
@@ -139,6 +209,11 @@ export default function VillageStackedBarChart({
             <p className="text-xs text-slate-500 mt-0.5">
               Showing: <strong className="text-slate-800">{DIMENSION_TITLES[activeDimension]}</strong> across {talukaName}
             </p>
+            {isTruncated && (
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Top {chartData.length} of {activeVillageCount} villages by severe cases. Use the village search below to find any other village.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -208,24 +283,21 @@ export default function VillageStackedBarChart({
               <span className="w-3 h-3 rounded-full bg-rose-500"></span> Severe (SAM / -3 SD)
             </span>
           </div>
-
-          <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
-            <ArrowDownRight className="w-3.5 h-3.5" /> Click any bar below to inspect children
-          </span>
         </div>
 
         {/* Chart Canvas */}
-        <div className={`w-full pt-2 cursor-pointer ${chartData.length > 8 ? "overflow-x-auto" : "h-72 sm:h-80"}`}>
+        {/* Fits the card width (at most MAX_CHART_VILLAGES bars), so the tooltip never lands in a scrolled-off area. */}
+        <div className="w-full pt-2 cursor-pointer">
         {!isMounted ? (
           <div className="w-full h-72 flex items-center justify-center bg-slate-50 rounded-2xl animate-pulse text-xs text-slate-400">
             Rendering Village Stacked Bars...
           </div>
         ) : (
-          <div style={{ minWidth: chartData.length > 8 ? `${Math.max(chartData.length * 70, 700)}px` : "100%", height: "320px" }}>
+          <div style={{ width: "100%", height: "320px" }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 45 }}
+                margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
                 onClick={(e: any) => {
                   if (e && e.activePayload && e.activePayload.length) {
                     const clickedVillage = e.activePayload[0].payload.village;
@@ -236,11 +308,10 @@ export default function VillageStackedBarChart({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11, fill: "#334155", fontWeight: 700 }}
-                  angle={-25}
-                  textAnchor="end"
+                  tick={(props: any) => <VillageTick {...props} chartData={chartData} />}
                   interval={0}
-                  height={65}
+                  // Two lines of village name plus the taluka line.
+                  height={58}
                   stroke="#CBD5E1"
                 />
                 <YAxis
@@ -249,6 +320,8 @@ export default function VillageStackedBarChart({
                   allowDecimals={false}
                 />
                 <Tooltip
+                  // Recharts' default hover highlight is a mid-grey block; a faint tint is enough to show the column.
+                  cursor={{ fill: "#F1F5F9" }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload;
@@ -327,45 +400,9 @@ export default function VillageStackedBarChart({
 </div>
 
 {!isCollapsed && (
-  <div className="pt-3 border-t border-slate-100 space-y-2.5">
-    {/* Interactive Village Drilldown Selection Bar */}
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
-        <ArrowDownRight className="w-3.5 h-3.5 text-blue-600" />
-        Select Village:
-      </span>
-      {displayedVillages.map((v) => {
-        const isSelected = selectedVillage === v.village;
-        return (
-          <button
-            key={v.village}
-            type="button"
-            onClick={() => onSelectVillage(v.village)}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
-              isSelected
-                ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300"
-                : "bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200"
-            }`}
-            title={`Click to view ${v.village} child clinical table`}
-          >
-            <span>{v.village}</span>
-            <span
-              className={`text-[10px] font-mono px-1.5 py-px rounded-md ${
-                isSelected ? "bg-blue-800 text-white" : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {v.totalChildren}
-            </span>
-            {v.samCount > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" title={`${v.samCount} SAM`} />
-            )}
-          </button>
-        );
-      })}
-    </div>
-
+  <div className="pt-3 border-t border-slate-100">
     <div className="text-[11px] text-slate-400 flex items-center justify-between">
-      <span>Click any bar or village button above to inspect individual child records below</span>
+      <span>Click any bar above to inspect individual child records below</span>
       {selectedVillage && (
         <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
           Showing: {selectedVillage}

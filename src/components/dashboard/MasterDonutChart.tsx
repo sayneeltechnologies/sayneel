@@ -14,7 +14,7 @@ interface Props {
     whz: { normal: number; moderate: number; severe: number };
     haz: { normal: number; moderate: number; severe: number };
   };
-  activeDimension: GrowthDimension;
+  activeDimension: GrowthDimension | null;
   onDimensionChange: (dim: GrowthDimension) => void;
   talukaName: string;
 }
