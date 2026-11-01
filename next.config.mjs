@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Static HTML export for cPanel hosting; /dashboard -> /dashboard/index.html works on Apache without rewrites.
+  output: "export",
+  trailingSlash: true,
   images: {
     unoptimized: true,
   },
-  // The dashboard used to live at /dashboard/bdo; keep old bookmarks working.
-  async redirects() {
-    return [{ source: "/dashboard/bdo", destination: "/dashboard", permanent: true }];
-  },
+  // redirects() isn't supported with static export; the old /dashboard/bdo redirect lives in public/.htaccess.
 };
 
 export default nextConfig;

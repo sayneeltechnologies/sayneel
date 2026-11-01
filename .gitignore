@@ -28,3 +28,6 @@ Thumbs.db
 .idea/
 
 *.tsbuildinfo
+
+# Deployment bundles
+*.zip

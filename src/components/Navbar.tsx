@@ -6,6 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogIn, LogOut, Menu, X, Sun, Moon } from "lucide-react";
 import { USER_KEY, clearSession, getSession } from "@/lib/auth";
 
+// Legacy marketing pages are plain HTML in public/; next/link would prefetch a
+// non-existent RSC payload (e.g. /services.html.txt) for them, so use a normal anchor.
+function SiteLink(props: React.ComponentPropsWithoutRef<"a"> & { href: string }) {
+  return /\.html($|#)/.test(props.href) ? <a {...props} /> : <Link {...props} />;
+}
+
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -63,7 +69,7 @@ export default function Navbar() {
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
-                <Link
+                <SiteLink
                   key={link.name}
                   href={link.href}
                   className={`transition-colors hover:text-blue-700 flex items-center gap-1.5 ${
@@ -76,7 +82,7 @@ export default function Navbar() {
                       {link.badge}
                     </span>
                   )}
-                </Link>
+                </SiteLink>
               );
             })}
           </nav>
@@ -105,12 +111,12 @@ export default function Navbar() {
               </Link>
             )}
 
-            <Link
+            <SiteLink
               href="/contact.html"
               className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-blue-700 transition-colors"
             >
               Contact
-            </Link>
+            </SiteLink>
 
             {/* Mobile Hamburger Button */}
             <button
@@ -130,7 +136,7 @@ export default function Navbar() {
         <div className="md:hidden fixed inset-x-0 top-[65px] bg-white border-b border-slate-200 p-4 shadow-xl z-40 transition-all animate-in slide-in-from-top-2">
           <nav className="flex flex-col gap-3 pb-3">
             {navLinks.map((link) => (
-              <Link
+              <SiteLink
                 key={link.name}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
@@ -142,15 +148,15 @@ export default function Navbar() {
                     {link.badge}
                   </span>
                 )}
-              </Link>
+              </SiteLink>
             ))}
-            <Link
+            <SiteLink
               href="/contact.html"
               onClick={() => setMobileMenuOpen(false)}
               className="py-2 px-3 text-base font-medium text-slate-700 rounded-lg hover:bg-slate-50"
             >
               Contact
-            </Link>
+            </SiteLink>
             <div className="pt-2 border-t border-slate-100">
               {loggedIn ? (
                 <button

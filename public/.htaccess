@@ -1,0 +1,31 @@
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# The dashboard used to live at /dashboard/bdo; keep old bookmarks working.
+RewriteRule ^dashboard/bdo/?$ /dashboard/ [L,R=301]
+
+# Use Next's exported 404 page
+ErrorDocument 404 /404.html
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+  # script-src needs 'unsafe-inline': a static export can't use nonces for Next's inline
+  # bootstrap scripts, and the marketing pages use onload= font handlers.
+  # connect-src lists the API origin from .env.production (both www and bare domain);
+  # update it if NEXT_PUBLIC_API_BASE_URL moves to another host.
+  # frame-src covers the optional Calendly and Google Maps embeds in assets/js/config.js.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://sayneeltech.in https://www.sayneeltech.in; frame-src https://calendly.com https://www.google.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+
+  # Hashed Next.js bundles never change; cache them for a year.
+  <If "%{REQUEST_URI} =~ m#^/_next/static/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>
