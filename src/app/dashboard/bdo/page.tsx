@@ -94,10 +94,17 @@ export default function BdoDashboardPage() {
         setKpi(data.kpi);
         setVillages(data.villages || []);
 
-        // Do not auto-select village on initial load to prevent unnecessary child API calls
-        setSelectedVillage((prev) =>
-          prev && data.villages?.some((v: any) => v.village === prev) ? prev : null
-        );
+        // Default to the first active village with children (e.g. Akurde with 46 children)
+        if (data.villages && data.villages.length > 0) {
+          const firstActive = data.villages.find((v: any) => v.totalChildren > 0) || data.villages[0];
+          setSelectedVillage((prev) =>
+            prev && data.villages.some((v: any) => v.village === prev)
+              ? prev
+              : firstActive.village
+          );
+        } else {
+          setSelectedVillage(null);
+        }
       }
     } catch (err) {
       console.error("Failed to load dashboard data from PostgreSQL:", err);

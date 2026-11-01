@@ -73,6 +73,8 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
   },
 ];
 
+const RADIAN = Math.PI / 180;
+
 export default function MasterDonutChart({
   totalChildren,
   dimensions,
@@ -88,25 +90,25 @@ export default function MasterDonutChart({
 
   return (
     <div className="w-full space-y-4">
-      {/* Section Header with Unified Master Legend */}
+      {/* Section Header with Taluka & Standard Info */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-black text-slate-900 tracking-tight">
               WHO Clinical Growth Standards &mdash; 4 Dimensions
             </h3>
-            <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
               {talukaName} Taluka
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Select any dimension to inspect breakdown by village. Standard WHO Z-Score classification applied.
+            Click any pie chart below to inspect village-wise distribution. Standard WHO Z-Score classifications applied.
           </p>
         </div>
 
-        {/* Unified Master Legend (Single source of truth) */}
-        <div className="flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 text-xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Legend:</span>
+        {/* Unified Legend Bar */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70 text-xs">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Triage:</span>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-semibold text-xs">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
             <span>Normal / Healthy</span>
@@ -122,7 +124,7 @@ export default function MasterDonutChart({
         </div>
       </div>
 
-      {/* 4 Pie / Donut Charts Side-by-Side Grid with Expanded Charts */}
+      {/* 4 Pie / Donut Charts Side-by-Side (Modeled after Executive Dashboard reference) */}
       <div
         className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         style={{
@@ -137,55 +139,74 @@ export default function MasterDonutChart({
           const data = dimensions[dim.key] || { normal: 0, moderate: 0, severe: 0 };
           const evaluated = data.normal + data.moderate + data.severe;
 
-          const normPct = evaluated > 0 ? ((data.normal / evaluated) * 100).toFixed(0) : "0";
-          const modPct = evaluated > 0 ? ((data.moderate / evaluated) * 100).toFixed(0) : "0";
-          const sevPct = evaluated > 0 ? ((data.severe / evaluated) * 100).toFixed(0) : "0";
-
           const chartData = [
             { name: dim.normalLabel, value: data.normal, color: "#10B981" },
             { name: dim.moderateLabel, value: data.moderate, color: "#F59E0B" },
             { name: dim.severeLabel, value: data.severe, color: "#EF4444" },
           ];
 
+          // Render percentage text directly on donut slices (matching reference dashboard)
+          const renderCustomizedLabel = (props: any) => {
+            const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
+            const pct = evaluated > 0 ? (100 * Number(value)) / evaluated : 0;
+            if (pct < 5) return null; // Hide if slice is too small to fit text cleanly
+            const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+            return (
+              <text
+                x={x}
+                y={y}
+                fill="#ffffff"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={12}
+                fontWeight={700}
+              >
+                {`${Math.round(pct)}%`}
+              </text>
+            );
+          };
+
           return (
             <div
               key={dim.key}
               onClick={() => onDimensionChange(dim.key)}
-              className={`p-4 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between group ${
+              className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer flex flex-col justify-between group ${
                 isActive
-                  ? "bg-white border-blue-600 shadow-lg ring-2 ring-blue-500/30"
-                  : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-md"
+                  ? "border-blue-600 shadow-md ring-2 ring-blue-500/25"
+                  : "border-slate-200/90 hover:border-blue-400 hover:shadow-sm"
               }`}
             >
               {/* Card Header */}
               <div>
-                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition ${
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
                         isActive
                           ? "bg-blue-600 text-white shadow-xs"
                           : "bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600"
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black text-slate-900 leading-tight">
+                      <h4 className="text-[13px] font-bold text-slate-900 leading-tight">
                         {dim.title}
                       </h4>
-                      <span className="text-[10px] font-bold text-slate-400">
+                      <span className="text-[10px] font-semibold text-slate-400">
                         {dim.shortCode}
                       </span>
                     </div>
                   </div>
 
                   {isActive ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-600 text-white shadow-xs">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
                       <CheckCircle2 className="w-3 h-3" /> Selected
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 transition">
+                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-blue-600 transition">
                       View &rarr;
                     </span>
                   )}
@@ -196,8 +217,8 @@ export default function MasterDonutChart({
                 </p>
               </div>
 
-              {/* Enlarged Donut Chart Canvas (Height increased to h-48 ~ 192px) */}
-              <div className="relative w-full h-48 my-2 flex items-center justify-center">
+              {/* Donut Chart Canvas with Arc Percentages & Center Total (from reference layout) */}
+              <div className="relative w-full h-[190px] my-1 flex items-center justify-center">
                 {!isMounted ? (
                   <div className="w-28 h-28 rounded-full border-4 border-slate-100 animate-pulse"></div>
                 ) : (
@@ -207,74 +228,68 @@ export default function MasterDonutChart({
                         data={chartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={72}
-                        paddingAngle={3}
+                        innerRadius="46%"
+                        outerRadius="92%"
+                        paddingAngle={1.5}
                         dataKey="value"
+                        labelLine={false}
+                        label={renderCustomizedLabel}
                         isAnimationActive={true}
                         animationDuration={600}
+                        stroke="#ffffff"
+                        strokeWidth={2}
                       >
                         {chartData.map((entry, idx) => (
-                          <Cell key={`cell-${idx}`} fill={entry.color} stroke="#FFFFFF" strokeWidth={2} />
+                          <Cell key={`cell-${idx}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const d = payload[0];
-                            return (
-                              <div className="bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-xl text-[11px] font-medium z-50">
-                                <span className="font-bold">{d.name}:</span> {d.value} ({evaluated > 0 ? Math.round(((d.value as number) / evaluated) * 100) : 0}%)
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
+                        contentStyle={{ fontSize: 12, borderRadius: 10 }}
+                        formatter={(val, name) => [
+                          `${Number(val).toLocaleString()} (${evaluated > 0 ? ((Number(val) * 100) / evaluated).toFixed(1) : 0}%)`,
+                          String(name),
+                        ]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
 
-                {/* Center Hole Callout - Kept COHORT jargon as requested */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    {evaluated}
-                  </span>
-                  <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
-                    COHORT
-                  </span>
+                {/* Center Hole Callout */}
+                <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
+                  <div>
+                    <div className="font-display text-[22px] font-black text-slate-900 tabular-nums leading-none">
+                      {Number(evaluated).toLocaleString()}
+                    </div>
+                    <div className="text-[9.5px] uppercase font-extrabold text-slate-400 tracking-wider mt-1">
+                      COHORT
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Compact 3-Pill Stats Strip (Space-efficient, no repeated full-line text) */}
-              <div className="grid grid-cols-3 gap-1.5 pt-3 border-t border-slate-100">
-                <div className="flex flex-col items-center justify-center bg-emerald-50/70 border border-emerald-100 rounded-xl py-1.5 px-1">
-                  <span className="text-[10px] font-bold text-emerald-800">
-                    {data.normal}
-                  </span>
-                  <span className="text-[9px] text-emerald-600 font-semibold">
-                    {normPct}% Normal
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center bg-amber-50/70 border border-amber-100 rounded-xl py-1.5 px-1">
-                  <span className="text-[10px] font-bold text-amber-800">
-                    {data.moderate}
-                  </span>
-                  <span className="text-[9px] text-amber-600 font-semibold">
-                    {modPct}% Mod.
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center bg-rose-50/70 border border-rose-100 rounded-xl py-1.5 px-1">
-                  <span className={`text-[10px] font-bold ${data.severe > 0 ? "text-rose-700 font-black" : "text-slate-400"}`}>
-                    {data.severe}
-                  </span>
-                  <span className="text-[9px] text-rose-600 font-semibold">
-                    {sevPct}% Sev.
-                  </span>
-                </div>
-              </div>
+              {/* Exact Reference Legend Rows: Color Chip + Label + Count + Percentage */}
+              <ul className="mt-2 space-y-1 pt-2.5 border-t border-slate-100">
+                {chartData.map((u) => {
+                  const pct = evaluated > 0 ? (((u.value ?? 0) * 100) / evaluated).toFixed(1) : "0.0";
+                  return (
+                    <li key={u.name} className="flex items-center gap-2 text-[12px]">
+                      <i
+                        className="w-2.5 h-2.5 rounded-xs inline-block shrink-0"
+                        style={{ background: u.color }}
+                      />
+                      <span className="flex-1 text-slate-700 leading-tight font-medium truncate">
+                        {u.name}
+                      </span>
+                      <b className="tabular-nums text-slate-900 font-bold">
+                        {Number(u.value ?? 0).toLocaleString()}
+                      </b>
+                      <span className="tabular-nums text-slate-500 w-11 text-right text-[11px]">
+                        {pct}%
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           );
         })}
