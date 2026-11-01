@@ -18,6 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
+import { API_ENDPOINTS } from "@/lib/api";
 
 export interface ChildRecord {
   id: string;
@@ -90,7 +91,7 @@ export default function VillageChildRosterTable({
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/dashboard/bdo/children?village=${encodeURIComponent(villageName)}&block_id=${blockId}`,
+          API_ENDPOINTS.villageChildren(villageName, blockId),
           { signal: abortController.signal }
         );
         const data = await res.json();

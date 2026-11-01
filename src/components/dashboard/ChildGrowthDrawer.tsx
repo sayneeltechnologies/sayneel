@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
+import { API_ENDPOINTS } from "@/lib/api";
 import {
   X,
   User,
@@ -108,7 +109,7 @@ export default function ChildGrowthDrawer({
     const fetchChildren = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/bdo/children?awc_id=${awcId}`);
+        const res = await fetch(API_ENDPOINTS.awcChildren(awcId));
         const data = await res.json();
         setChildren(data.children || []);
       } catch (err) {
@@ -132,7 +133,7 @@ export default function ChildGrowthDrawer({
     setExpandedChildId(childId);
     setHistoryLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/bdo/children?child_id=${childId}`);
+      const res = await fetch(API_ENDPOINTS.childGrowthHistory(childId));
       const data = await res.json();
       setChildHistory(data.history || []);
     } catch (err) {

@@ -29,6 +29,7 @@ import {
 } from "recharts";
 
 export type GrowthReportTab = "zscore" | "wfa" | "wfh" | "lhfa";
+import { API_ENDPOINTS } from "@/lib/api";
 
 interface HistoryPoint {
   id: string;
@@ -80,7 +81,7 @@ export default function WhoGrowthReportModal({ isOpen, onClose, child }: Props) 
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/bdo/children?child_id=${child.id}`);
+        const res = await fetch(API_ENDPOINTS.childGrowthHistory(child.id));
         const data = await res.json();
         setHistory(data.history || []);
       } catch (err) {

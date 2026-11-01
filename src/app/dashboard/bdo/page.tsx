@@ -16,6 +16,7 @@ import MasterDonutChart, { GrowthDimension } from "@/components/dashboard/Master
 import VillageStackedBarChart from "@/components/dashboard/VillageStackedBarChart";
 import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
 import VillageChildRosterTable, { clearVillageChildrenCache } from "@/components/dashboard/VillageChildRosterTable";
+import { API_ENDPOINTS } from "@/lib/api";
 
 interface BlockOption {
   id: string;
@@ -82,9 +83,7 @@ export default function BdoDashboardPage() {
   const fetchDashboardData = async (blockId?: string) => {
     setLoading(true);
     try {
-      const url = blockId
-        ? `/api/dashboard/bdo?block_id=${blockId}`
-        : `/api/dashboard/bdo`;
+      const url = API_ENDPOINTS.bdoDashboard(blockId);
       const res = await fetch(url);
       const data = await res.json();
 
