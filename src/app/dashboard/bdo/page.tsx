@@ -63,7 +63,7 @@ export default function BdoDashboardPage() {
   const [activeDimension, setActiveDimension] = useState<GrowthDimension>("status");
   const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
   const [isVillageChartExpanded, setIsVillageChartExpanded] = useState<boolean>(false);
-  const [isVillageChartCollapsed, setIsVillageChartCollapsed] = useState<boolean>(false);
+  const [isVillageChartCollapsed, setIsVillageChartCollapsed] = useState<boolean>(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
@@ -95,17 +95,10 @@ export default function BdoDashboardPage() {
         setKpi(data.kpi);
         setVillages(data.villages || []);
 
-        // Default to the first active village with children (e.g. Akurde with 46 children)
-        if (data.villages && data.villages.length > 0) {
-          const firstActive = data.villages.find((v: any) => v.totalChildren > 0) || data.villages[0];
-          setSelectedVillage((prev) =>
-            prev && data.villages.some((v: any) => v.village === prev)
-              ? prev
-              : firstActive.village
-          );
-        } else {
-          setSelectedVillage(null);
-        }
+        // Do not auto-load village child roster on startup to reduce API calls (loads on-demand when clicked)
+        setSelectedVillage((prev) =>
+          prev && data.villages?.some((v: any) => v.village === prev) ? prev : null
+        );
       }
     } catch (err) {
       console.error("Failed to load dashboard data from PostgreSQL:", err);
@@ -239,27 +232,58 @@ export default function BdoDashboardPage() {
         {/* ==================== TIER 2: VILLAGE STACKED BAR CHART + VACCINATION METER ==================== */}
         {villages.length > 0 && kpi && (
           <div id="village-distribution-tier" className="scroll-mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-              {/* Village-Wise Stacked Bar Chart (8 cols standard, or 12 cols full width when expanded) */}
-              <div className={isVillageChartExpanded ? "lg:col-span-12" : "lg:col-span-8"}>
-                <VillageStackedBarChart
-                  villages={villages}
-                  activeDimension={activeDimension}
-                  talukaName={activeBlockName}
-                  selectedVillage={selectedVillage}
-                  onSelectVillage={handleVillageSelect}
-                  isExpanded={isVillageChartExpanded}
-                  onToggleExpand={() => setIsVillageChartExpanded(!isVillageChartExpanded)}
-                  isCollapsed={isVillageChartCollapsed}
-                  onToggleCollapse={() => setIsVillageChartCollapsed(!isVillageChartCollapsed)}
-                />
+            {isVillageChartCollapsed ? (
+              <div
+                onClick={() => setIsVillageChartCollapsed(false)}
+                className="bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl p-4.5 flex items-center justify-between cursor-pointer transition shadow-xs group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition">
+                    <LineChart className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span>Village-Wise Stacked Distribution &amp; Immunisation Meter</span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700">
+                        {villages.filter((v) => v.totalChildren > 0).length} Active Villages
+                      </span>
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Loaded on-demand. Click to inspect village distribution for <strong>{activeDimension.toUpperCase()}</strong> &rarr;
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60 group-hover:bg-blue-600 group-hover:text-white transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Open Breakdown</span>
+                  <span>▼</span>
+                </button>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                {/* Village-Wise Stacked Bar Chart (8 cols standard, or 12 cols full width when expanded) */}
+                <div className={isVillageChartExpanded ? "lg:col-span-12" : "lg:col-span-8"}>
+                  <VillageStackedBarChart
+                    villages={villages}
+                    activeDimension={activeDimension}
+                    talukaName={activeBlockName}
+                    selectedVillage={selectedVillage}
+                    onSelectVillage={handleVillageSelect}
+                    isExpanded={isVillageChartExpanded}
+                    onToggleExpand={() => setIsVillageChartExpanded(!isVillageChartExpanded)}
+                    isCollapsed={false}
+                    onToggleCollapse={() => setIsVillageChartCollapsed(true)}
+                  />
+                </div>
 
-              {/* Vaccination Meter (4 cols standard, or 12 cols below when expanded) */}
-              <div className={isVillageChartExpanded ? "lg:col-span-12 flex flex-col justify-between" : "lg:col-span-4 flex flex-col justify-between"}>
-                <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
+                {/* Vaccination Meter (4 cols standard, or 12 cols below when expanded) */}
+                <div className={isVillageChartExpanded ? "lg:col-span-12 flex flex-col justify-between" : "lg:col-span-4 flex flex-col justify-between"}>
+                  <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -276,12 +300,13 @@ export default function BdoDashboardPage() {
             />
           </div>
         ) : (
-          <div className="bg-gradient-to-r from-blue-50/60 via-slate-50 to-indigo-50/60 border border-dashed border-blue-200 rounded-3xl p-6 text-center shadow-xs">
-            <p className="text-sm text-slate-700 font-bold">
-              Village Child Roster is Lazy-Loaded (On-Demand)
+          <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-5 text-center shadow-xs">
+            <p className="text-xs text-slate-700 font-bold flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>Child Clinical Table Minimized (On-Demand)</span>
             </p>
-            <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-              To minimize unnecessary API requests and reduce bandwidth, individual child records are fetched only when you click on a specific village bar or village selector above.
+            <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
+              To reduce API calls, child records are fetched only when you click on a specific village bar above.
             </p>
           </div>
         )}
