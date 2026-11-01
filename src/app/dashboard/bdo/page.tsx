@@ -62,7 +62,8 @@ export default function BdoDashboardPage() {
   // Progressive Drill-down state
   const [activeDimension, setActiveDimension] = useState<GrowthDimension>("status");
   const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
-  const [showVillageBreakdown, setShowVillageBreakdown] = useState<boolean>(true);
+  const [isVillageChartExpanded, setIsVillageChartExpanded] = useState<boolean>(false);
+  const [isVillageChartCollapsed, setIsVillageChartCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("balsaathi_user");
@@ -130,7 +131,7 @@ export default function BdoDashboardPage() {
 
   const handleDimensionChange = (dim: GrowthDimension) => {
     setActiveDimension(dim);
-    setShowVillageBreakdown(true);
+    setIsVillageChartCollapsed(false);
     // Smooth scroll down to village distribution section
     setTimeout(() => {
       const el = document.getElementById("village-distribution-tier");
@@ -237,46 +238,28 @@ export default function BdoDashboardPage() {
 
         {/* ==================== TIER 2: VILLAGE STACKED BAR CHART + VACCINATION METER ==================== */}
         {villages.length > 0 && kpi && (
-          <div id="village-distribution-tier" className="space-y-4 scroll-mt-6">
-            <div className="flex items-center justify-between bg-white px-5 py-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-800 leading-tight">
-                    Tier 2 &mdash; Village-Wise Stacked Distribution &amp; Immunisation Coverage
-                  </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Showing distribution for <strong>{activeDimension.toUpperCase()}</strong> across {villages.filter((v) => v.totalChildren > 0).length} active villages
-                  </p>
-                </div>
+          <div id="village-distribution-tier" className="scroll-mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Village-Wise Stacked Bar Chart (8 cols standard, or 12 cols full width when expanded) */}
+              <div className={isVillageChartExpanded ? "lg:col-span-12" : "lg:col-span-8"}>
+                <VillageStackedBarChart
+                  villages={villages}
+                  activeDimension={activeDimension}
+                  talukaName={activeBlockName}
+                  selectedVillage={selectedVillage}
+                  onSelectVillage={handleVillageSelect}
+                  isExpanded={isVillageChartExpanded}
+                  onToggleExpand={() => setIsVillageChartExpanded(!isVillageChartExpanded)}
+                  isCollapsed={isVillageChartCollapsed}
+                  onToggleCollapse={() => setIsVillageChartCollapsed(!isVillageChartCollapsed)}
+                />
               </div>
-              <button
-                onClick={() => setShowVillageBreakdown(!showVillageBreakdown)}
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition cursor-pointer"
-              >
-                {showVillageBreakdown ? "Collapse Breakdown ▲" : "Expand Breakdown ▼"}
-              </button>
+
+              {/* Vaccination Meter (4 cols standard, or 12 cols below when expanded) */}
+              <div className={isVillageChartExpanded ? "lg:col-span-12 flex flex-col justify-between" : "lg:col-span-4 flex flex-col justify-between"}>
+                <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
+              </div>
             </div>
-
-            {showVillageBreakdown && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                {/* Village-Wise Stacked Bar Chart (8 cols) */}
-                <div className="lg:col-span-8">
-                  <VillageStackedBarChart
-                    villages={villages}
-                    activeDimension={activeDimension}
-                    talukaName={activeBlockName}
-                    selectedVillage={selectedVillage}
-                    onSelectVillage={handleVillageSelect}
-                  />
-                </div>
-
-                {/* Vaccination Meter (4 cols) */}
-                <div className="lg:col-span-4 flex flex-col justify-between">
-                  <ImmunisationGauge rate={kpi.vaccineRate} target={95.0} />
-                </div>
-              </div>
-            )}
           </div>
         )}
 

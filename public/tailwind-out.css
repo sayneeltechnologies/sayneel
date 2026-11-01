@@ -2527,11 +2527,6 @@ video {
   background-color: rgb(251 191 36 / var(--tw-bg-opacity, 1));
 }
 
-.hover\:bg-blue-100:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1));
-}
-
 .hover\:bg-blue-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
@@ -2819,6 +2814,10 @@ video {
 }
 
 @media (min-width: 1024px) {
+  .lg\:col-span-12 {
+    grid-column: span 12 / span 12;
+  }
+
   .lg\:col-span-2 {
     grid-column: span 2 / span 2;
   }
