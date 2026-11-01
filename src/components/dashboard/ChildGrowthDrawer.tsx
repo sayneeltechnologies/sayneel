@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
+import { api } from "@/lib/api";
 import {
   X,
   User,
@@ -108,9 +109,10 @@ export default function ChildGrowthDrawer({
     const fetchChildren = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/bdo/children?awc_id=${awcId}`);
-        const data = await res.json();
-        setChildren(data.children || []);
+        const data = await api.get<{ children?: any[] }>("/dashboard/bdo/children", {
+          query: { awc_id: awcId },
+        });
+        setChildren(data?.children || []);
       } catch (err) {
         console.error("Failed to load children:", err);
       } finally {
@@ -132,9 +134,10 @@ export default function ChildGrowthDrawer({
     setExpandedChildId(childId);
     setHistoryLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/bdo/children?child_id=${childId}`);
-      const data = await res.json();
-      setChildHistory(data.history || []);
+      const data = await api.get<{ history?: HistoryItem[] }>("/dashboard/bdo/children", {
+        query: { child_id: childId },
+      });
+      setChildHistory(data?.history || []);
     } catch (err) {
       console.error("Failed to load child history:", err);
     } finally {

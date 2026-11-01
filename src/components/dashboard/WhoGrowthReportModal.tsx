@@ -16,6 +16,7 @@ import {
   Ruler,
   Info,
 } from "lucide-react";
+import { api } from "@/lib/api";
 import {
   LineChart,
   Line,
@@ -80,9 +81,10 @@ export default function WhoGrowthReportModal({ isOpen, onClose, child }: Props) 
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/bdo/children?child_id=${child.id}`);
-        const data = await res.json();
-        setHistory(data.history || []);
+        const data = await api.get<{ history?: HistoryPoint[] }>("/dashboard/bdo/children", {
+          query: { child_id: child.id },
+        });
+        setHistory(data?.history || []);
       } catch (err) {
         console.error("Failed to load child history:", err);
       } finally {

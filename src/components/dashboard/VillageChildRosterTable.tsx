@@ -18,6 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 import WhoGrowthReportModal from "./WhoGrowthReportModal";
+import { api } from "@/lib/api";
 
 export interface ChildRecord {
   id: string;
@@ -48,7 +49,11 @@ export interface VillageOption {
 }
 
 interface Props {
+  // Shown in the header and village picker (e.g. "Kadgaon (Bhudargad)" in the All talukas view).
   villageName: string;
+  // Village name sent to the API; defaults to villageName.
+  queryVillage?: string;
+  // Full label, e.g. "Bhudargad Taluka".
   talukaName: string;
   blockId: string;
   allVillages?: Array<string | VillageOption>;
@@ -62,6 +67,7 @@ export const clearVillageChildrenCache = () => villageChildrenCache.clear();
 
 export default function VillageChildRosterTable({
   villageName,
+  queryVillage = villageName,
   talukaName,
   blockId,
   allVillages = [],
@@ -75,9 +81,9 @@ export default function VillageChildRosterTable({
   const [reportModalChild, setReportModalChild] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!villageName || !blockId) return;
+    if (!queryVillage || !blockId) return;
 
-    const cacheKey = `${blockId}_${villageName}`;
+    const cacheKey = `${blockId}_${queryVillage}`;
     if (villageChildrenCache.has(cacheKey)) {
       setChildren(villageChildrenCache.get(cacheKey) || []);
       setLoading(false);
@@ -89,12 +95,11 @@ export default function VillageChildRosterTable({
     const fetchChildren = async () => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/dashboard/bdo/children?village=${encodeURIComponent(villageName)}&block_id=${blockId}`,
-          { signal: abortController.signal }
-        );
-        const data = await res.json();
-        const records = data.children || [];
+        const data = await api.get<{ children?: any[] }>("/dashboard/bdo/children", {
+          query: { village: queryVillage, block_id: blockId },
+          signal: abortController.signal,
+        });
+        const records = data?.children || [];
         villageChildrenCache.set(cacheKey, records);
         setChildren(records);
       } catch (err: any) {
@@ -113,7 +118,7 @@ export default function VillageChildRosterTable({
     return () => {
       abortController.abort();
     };
-  }, [villageName, blockId]);
+  }, [queryVillage, blockId]);
 
   // Senior dev optimization: Compute SAM, MAM, and Normal counts in a single O(N) pass
   // instead of 3 separate .filter() passes
@@ -177,7 +182,7 @@ export default function VillageChildRosterTable({
         <div>
           {/* Breadcrumb Navigation */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-            <span>{talukaName} Taluka</span>
+            <span>{talukaName}</span>
             <span>&gt;</span>
             <span className="text-amber-400 font-bold">{villageName} Village</span>
             <span>&gt;</span>

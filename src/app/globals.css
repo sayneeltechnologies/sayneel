@@ -7,3 +7,10 @@
   --portal-primary: #1B3A8F;
   --portal-secondary: #0F2459;
 }
+
+/* Recharts 3 makes chart SVGs focusable, so clicking a chart (e.g. selecting a donut card) drew the
+   browser's black focus box around it. Hide it for mouse clicks; keyboard focus still shows an outline. */
+.recharts-wrapper:focus:not(:focus-visible),
+.recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}

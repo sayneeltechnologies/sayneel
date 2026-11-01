@@ -1,13 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LogIn, Menu, X, Sun, Moon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LogIn, LogOut, Menu, X, Sun, Moon } from "lucide-react";
+import { USER_KEY, clearSession, getSession } from "@/lib/auth";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Re-read the session on every route change (login / logout / expired-token redirects all navigate)
+  // and when another tab signs in or out.
+  useEffect(() => {
+    setLoggedIn(getSession() !== null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === USER_KEY) setLoggedIn(getSession() !== null);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const handleLogout = () => {
+    clearSession();
+    setLoggedIn(false);
+    setMobileMenuOpen(false);
+    router.push("/login");
+  };
 
   const navLinks = [
     { name: "Services", href: "/services.html" },
@@ -59,15 +83,27 @@ export default function Navbar() {
 
           {/* Right Action Buttons */}
           <div className="nav-cta flex items-center gap-3">
-            {/* PORTAL LOGIN BUTTON (The Manager's Feature Entrypoint) */}
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-blue-700 to-indigo-800 text-white text-sm font-semibold shadow-sm hover:from-blue-800 hover:to-indigo-900 transition-all hover:shadow"
-              title="BalSaathi Role-Based Web Portal"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Portal Login</span>
-            </Link>
+            {/* PORTAL LOGIN BUTTON (The Manager's Feature Entrypoint) — becomes Logout once signed in */}
+            {loggedIn ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-blue-700 to-indigo-800 text-white text-sm font-semibold shadow-sm hover:from-blue-800 hover:to-indigo-900 transition-all hover:shadow cursor-pointer"
+                title="Sign out of the BalSaathi portal"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-blue-700 to-indigo-800 text-white text-sm font-semibold shadow-sm hover:from-blue-800 hover:to-indigo-900 transition-all hover:shadow"
+                title="BalSaathi Role-Based Web Portal"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Portal Login</span>
+              </Link>
+            )}
 
             <Link
               href="/contact.html"
@@ -116,14 +152,25 @@ export default function Navbar() {
               Contact
             </Link>
             <div className="pt-2 border-t border-slate-100">
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-700 text-white font-semibold text-center shadow"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Portal Login</span>
-              </Link>
+              {loggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-700 text-white font-semibold text-center shadow cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-700 text-white font-semibold text-center shadow"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Portal Login</span>
+                </Link>
+              )}
             </div>
           </nav>
         </div>

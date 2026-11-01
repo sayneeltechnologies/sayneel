@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Download,
-  LogOut,
   MapPin,
-  Database,
   RefreshCw,
   LineChart,
 } from "lucide-react";
@@ -16,14 +14,23 @@ import MasterDonutChart, { GrowthDimension } from "@/components/dashboard/Master
 import VillageStackedBarChart from "@/components/dashboard/VillageStackedBarChart";
 import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
 import VillageChildRosterTable, { clearVillageChildrenCache } from "@/components/dashboard/VillageChildRosterTable";
+import { api, ApiError } from "@/lib/api";
+import { Officer, clearSession, getSession } from "@/lib/auth";
 
 interface BlockOption {
   id: string;
   name: string;
 }
 
+// block_id for the "All talukas" view (every taluka the user may see, combined).
+const ALL_TALUKAS = "all";
+
 interface VillageSummary {
+  // Display label; in the All talukas view it includes the taluka, e.g. "Kadgaon (Bhudargad)".
   village: string;
+  villageName: string;
+  blockId: string;
+  block: string;
   sector: string;
   awcIds: string[];
   awcCount: number;
@@ -42,19 +49,12 @@ interface VillageSummary {
   hazSevere: number;
 }
 
-const DEFAULT_OFFICER = {
-  name: "Dr. R. K. Patil",
-  role: "BDO",
-  roleLabel: "Block Development Officer (गट विकास अधिकारी)",
-  jurisdiction: "Bhudargad Taluka, District Kolhapur",
-};
-
 export default function BdoDashboardPage() {
   const router = useRouter();
-  const [officer, setOfficer] = useState<any>(DEFAULT_OFFICER);
+  const [officer, setOfficer] = useState<Officer | null>(null);
   const [blocks, setBlocks] = useState<BlockOption[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string>("");
-  const [activeBlockName, setActiveBlockName] = useState<string>("Bhudargad");
+  const [activeBlockName, setActiveBlockName] = useState<string>("");
   const [kpi, setKpi] = useState<any | null>(null);
   const [villages, setVillages] = useState<VillageSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,30 +65,18 @@ export default function BdoDashboardPage() {
   const [isVillageChartExpanded, setIsVillageChartExpanded] = useState<boolean>(false);
   const [isVillageChartCollapsed, setIsVillageChartCollapsed] = useState<boolean>(true);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("balsaathi_user");
-    if (savedUser) {
-      try {
-        setOfficer(JSON.parse(savedUser));
-      } catch {
-        setOfficer(DEFAULT_OFFICER);
-      }
-    } else {
-      localStorage.setItem("balsaathi_user", JSON.stringify(DEFAULT_OFFICER));
-      setOfficer(DEFAULT_OFFICER);
-    }
-  }, []);
+  // Signing out is done from the navbar; this is only used when the API rejects the token.
+  const handleLogout = () => {
+    clearSession();
+    router.push("/login");
+  };
 
   const fetchDashboardData = async (blockId?: string) => {
     setLoading(true);
     try {
-      const url = blockId
-        ? `/api/dashboard/bdo?block_id=${blockId}`
-        : `/api/dashboard/bdo`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await api.get<any>("/dashboard/bdo", { query: { block_id: blockId } });
 
-      if (data && !data.error) {
+      if (data) {
         setBlocks(data.blocks || []);
         setActiveBlockName(data.activeBlock?.name || "Taluka");
         setSelectedBlockId(data.activeBlock?.id || "");
@@ -101,13 +89,24 @@ export default function BdoDashboardPage() {
         );
       }
     } catch (err) {
-      console.error("Failed to load dashboard data from PostgreSQL:", err);
+      // Expired or invalid token: back to sign in.
+      if (err instanceof ApiError && err.status === 401) {
+        handleLogout();
+        return;
+      }
+      console.error("Failed to load dashboard data:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    const session = getSession();
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+    setOfficer(session);
     fetchDashboardData();
   }, []);
 
@@ -135,10 +134,11 @@ export default function BdoDashboardPage() {
     [villages]
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("balsaathi_user");
-    router.push("/login");
-  };
+  const isAllTalukas = selectedBlockId === ALL_TALUKAS;
+  // Empty until the first load says which taluka (or All Talukas) is active.
+  const talukaLabel = isAllTalukas ? "All Talukas" : activeBlockName ? `${activeBlockName} Taluka` : "";
+  // The drilldown needs the selected village's own name and taluka (they differ from the label in the All view).
+  const selectedVillageSummary = villages.find((v) => v.village === selectedVillage);
 
   const handleDimensionChange = (dim: GrowthDimension) => {
     setActiveDimension(dim);
@@ -173,25 +173,20 @@ export default function BdoDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-20">
-      {/* ==================== BDO GOVERNANCE HEADER ==================== */}
+      {/* ==================== OFFICIALS DASHBOARD HEADER (BDO, CDPO, DPO, Sarpanch, Admin) ==================== */}
       <div className="bg-slate-900 text-white border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded bg-amber-500 text-slate-950 text-xs font-extrabold uppercase tracking-wider">
-                  BDO PORTAL
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
-                  <Database className="w-3.5 h-3.5" />
-                  Live PostgreSQL DB
-                </span>
-              </div>
+                  OFFICIALS DASHBOARD
+                </span>              </div>
               <h1 className="text-2xl font-bold mt-1 text-white tracking-tight flex items-center gap-2">
-                {activeBlockName} Taluka &mdash; Child Growth &amp; Immunisation
+                {talukaLabel} &mdash; Child Growth &amp; Immunisation
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Logged in as: <strong className="text-white">{officer?.name || "Dr. R. K. Patil"}</strong> ({officer?.roleLabel || "Block Development Officer"})
+                Logged in as: <strong className="text-white">{officer?.name}</strong> ({officer?.roleLabel})
               </p>
             </div>
 
@@ -205,6 +200,11 @@ export default function BdoDashboardPage() {
                   onChange={(e) => handleBlockChange(e.target.value)}
                   className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
                 >
+                  {blocks.length > 1 && (
+                    <option value={ALL_TALUKAS} className="bg-slate-900 text-white">
+                      All Talukas
+                    </option>
+                  )}
                   {blocks.map((b) => (
                     <option key={b.id} value={b.id} className="bg-slate-900 text-white">
                       {b.name}
@@ -219,16 +219,7 @@ export default function BdoDashboardPage() {
                 title="Refresh from Database (Clears Cache)"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold transition cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </button>
-            </div>
+              </button>            </div>
           </div>
         </div>
       </div>
@@ -242,7 +233,7 @@ export default function BdoDashboardPage() {
               dimensions={kpi.dimensions}
               activeDimension={activeDimension}
               onDimensionChange={handleDimensionChange}
-              talukaName={activeBlockName}
+              talukaName={talukaLabel}
             />
           </div>
         )}
@@ -253,11 +244,11 @@ export default function BdoDashboardPage() {
             {isVillageChartCollapsed ? (
               <div
                 onClick={() => setIsVillageChartCollapsed(false)}
-                className="bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl p-4.5 flex items-center justify-between cursor-pointer transition shadow-xs group"
+                className="bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl p-[18px] flex items-center justify-between cursor-pointer transition shadow-xs group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition">
-                    <LineChart className="w-4.5 h-4.5" />
+                    <LineChart className="w-[18px] h-[18px]" />
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -286,7 +277,7 @@ export default function BdoDashboardPage() {
                   <VillageStackedBarChart
                     villages={villages}
                     activeDimension={activeDimension}
-                    talukaName={activeBlockName}
+                    talukaName={talukaLabel}
                     selectedVillage={selectedVillage}
                     onSelectVillage={handleVillageSelect}
                     isExpanded={isVillageChartExpanded}
@@ -310,8 +301,9 @@ export default function BdoDashboardPage() {
           <div className="w-full">
             <VillageChildRosterTable
               villageName={selectedVillage}
-              talukaName={activeBlockName}
-              blockId={selectedBlockId}
+              queryVillage={selectedVillageSummary?.villageName ?? selectedVillage}
+              talukaName={selectedVillageSummary?.block ? `${selectedVillageSummary.block} Taluka` : talukaLabel}
+              blockId={selectedVillageSummary?.blockId ?? selectedBlockId}
               allVillages={villageOptions}
               onSelectVillage={handleVillageSelect}
               onClearVillageFilter={handleClearVillageFilter}
@@ -335,7 +327,7 @@ export default function BdoDashboardPage() {
                   className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>{v.village}</span>
-                  <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-md font-mono">
+                  <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-px rounded-md font-mono">
                     {v.totalChildren}
                   </span>
                   {v.samCount > 0 && (

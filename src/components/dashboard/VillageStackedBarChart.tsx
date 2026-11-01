@@ -350,7 +350,7 @@ export default function VillageStackedBarChart({
           >
             <span>{v.village}</span>
             <span
-              className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+              className={`text-[10px] font-mono px-1.5 py-px rounded-md ${
                 isSelected ? "bg-blue-800 text-white" : "bg-slate-200 text-slate-600"
               }`}
             >
