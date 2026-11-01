@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Search,
@@ -56,6 +56,10 @@ interface Props {
   onClearVillageFilter?: () => void;
 }
 
+// Module-level persistent cache across component unmounts
+export const villageChildrenCache = new Map<string, ChildRecord[]>();
+export const clearVillageChildrenCache = () => villageChildrenCache.clear();
+
 export default function VillageChildRosterTable({
   villageName,
   talukaName,
@@ -69,60 +73,79 @@ export default function VillageChildRosterTable({
   const [filter, setFilter] = useState<"ALL" | "SAM" | "MAM" | "NORMAL">("ALL");
   const [search, setSearch] = useState("");
   const [reportModalChild, setReportModalChild] = useState<any | null>(null);
-  // Client-side cache to eliminate redundant API calls when switching between villages
-  const cacheRef = useRef<Record<string, ChildRecord[]>>({});
 
   useEffect(() => {
     if (!villageName || !blockId) return;
 
     const cacheKey = `${blockId}_${villageName}`;
-    if (cacheRef.current[cacheKey]) {
-      setChildren(cacheRef.current[cacheKey]);
+    if (villageChildrenCache.has(cacheKey)) {
+      setChildren(villageChildrenCache.get(cacheKey) || []);
       setLoading(false);
       return;
     }
+
+    const abortController = new AbortController();
 
     const fetchChildren = async () => {
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/dashboard/bdo/children?village=${encodeURIComponent(villageName)}&block_id=${blockId}`
+          `/api/dashboard/bdo/children?village=${encodeURIComponent(villageName)}&block_id=${blockId}`,
+          { signal: abortController.signal }
         );
         const data = await res.json();
         const records = data.children || [];
-        cacheRef.current[cacheKey] = records;
+        villageChildrenCache.set(cacheKey, records);
         setChildren(records);
-      } catch (err) {
-        console.error("Failed to fetch village children:", err);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch village children:", err);
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchChildren();
+
+    return () => {
+      abortController.abort();
+    };
   }, [villageName, blockId]);
 
-  const samCount = children.filter((c) => c.status === 3).length;
-  const mamCount = children.filter((c) => c.status === 2).length;
-  const normalCount = children.filter((c) => c.status === 1).length;
+  // Senior dev optimization: Compute SAM, MAM, and Normal counts in a single O(N) pass
+  // instead of 3 separate .filter() passes
+  const { samCount, mamCount, normalCount } = useMemo(() => {
+    let sam = 0;
+    let mam = 0;
+    let normal = 0;
+    for (let i = 0; i < children.length; i++) {
+      const s = children[i].status;
+      if (s === 3) sam++;
+      else if (s === 2) mam++;
+      else if (s === 1) normal++;
+    }
+    return { samCount: sam, mamCount: mam, normalCount: normal };
+  }, [children]);
 
-  const filteredChildren = children.filter((c) => {
-    const matchesFilter =
-      filter === "ALL"
-        ? true
-        : filter === "SAM"
-        ? c.status === 3
-        : filter === "MAM"
-        ? c.status === 2
-        : c.status === 1;
+  // Senior dev optimization: Memoize filtered list so searching/filtering doesn't re-run needlessly
+  const filteredChildren = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return children.filter((c) => {
+      if (filter === "SAM" && c.status !== 3) return false;
+      if (filter === "MAM" && c.status !== 2) return false;
+      if (filter === "NORMAL" && c.status !== 1) return false;
+      if (!q) return true;
 
-    const matchesSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.motherName && c.motherName.toLowerCase().includes(search.toLowerCase())) ||
-      c.awcName.toLowerCase().includes(search.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
+      return (
+        c.name.toLowerCase().includes(q) ||
+        Boolean(c.motherName && c.motherName.toLowerCase().includes(q)) ||
+        c.awcName.toLowerCase().includes(q)
+      );
+    });
+  }, [children, filter, search]);
 
   const exportVillageCsv = () => {
     const headers =
@@ -144,6 +167,7 @@ export default function VillageChildRosterTable({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up memory leak
   };
 
   return (

@@ -75,6 +75,29 @@ const DIMENSIONS_LIST: DimensionMeta[] = [
 
 const RADIAN = Math.PI / 180;
 
+// Senior Dev Optimization: Static donut label renderer avoids creating closure functions inside .map() on every render
+const renderDonutLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+  const pct = Math.round(Number(percent || 0) * 100);
+  if (pct < 5) return null; // Hide if slice is too narrow to fit label legibly
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#ffffff"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={12}
+      fontWeight={700}
+    >
+      {`${pct}%`}
+    </text>
+  );
+};
+
 export default function MasterDonutChart({
   totalChildren,
   dimensions,
@@ -145,29 +168,6 @@ export default function MasterDonutChart({
             { name: dim.severeLabel, value: data.severe, color: "#EF4444" },
           ];
 
-          // Render percentage text directly on donut slices (matching reference dashboard)
-          const renderCustomizedLabel = (props: any) => {
-            const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
-            const pct = evaluated > 0 ? (100 * Number(value)) / evaluated : 0;
-            if (pct < 5) return null; // Hide if slice is too small to fit text cleanly
-            const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
-            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-            return (
-              <text
-                x={x}
-                y={y}
-                fill="#ffffff"
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={12}
-                fontWeight={700}
-              >
-                {`${Math.round(pct)}%`}
-              </text>
-            );
-          };
-
           return (
             <div
               key={dim.key}
@@ -217,7 +217,7 @@ export default function MasterDonutChart({
                 </p>
               </div>
 
-              {/* Donut Chart Canvas with Arc Percentages & Center Total (Maximized & Clean) */}
+              {/* Donut Chart Canvas with Arc Percentages & Center Total */}
               <div className="relative w-full h-[220px] my-2 flex items-center justify-center">
                 {!isMounted ? (
                   <div className="w-32 h-32 rounded-full border-4 border-slate-100 animate-pulse"></div>
@@ -233,7 +233,7 @@ export default function MasterDonutChart({
                         paddingAngle={1.5}
                         dataKey="value"
                         labelLine={false}
-                        label={renderCustomizedLabel}
+                        label={renderDonutLabel}
                         isAnimationActive={true}
                         animationDuration={600}
                         stroke="#ffffff"

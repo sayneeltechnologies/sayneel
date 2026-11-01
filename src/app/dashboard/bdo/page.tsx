@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,7 +15,7 @@ import {
 import MasterDonutChart, { GrowthDimension } from "@/components/dashboard/MasterDonutChart";
 import VillageStackedBarChart from "@/components/dashboard/VillageStackedBarChart";
 import ImmunisationGauge from "@/components/dashboard/ImmunisationGauge";
-import VillageChildRosterTable from "@/components/dashboard/VillageChildRosterTable";
+import VillageChildRosterTable, { clearVillageChildrenCache } from "@/components/dashboard/VillageChildRosterTable";
 
 interface BlockOption {
   id: string;
@@ -112,10 +112,28 @@ export default function BdoDashboardPage() {
   }, []);
 
   const handleBlockChange = (newBlockId: string) => {
+    clearVillageChildrenCache();
     setSelectedBlockId(newBlockId);
     setSelectedVillage(null);
     fetchDashboardData(newBlockId);
   };
+
+  const handleRefresh = () => {
+    clearVillageChildrenCache();
+    fetchDashboardData(selectedBlockId);
+  };
+
+  // Senior Dev Optimization: Memoize transformed and filtered village lists
+  // Prevents re-creating object arrays on every render pass
+  const activeVillages = useMemo(
+    () => villages.filter((v) => v.totalChildren > 0),
+    [villages]
+  );
+
+  const villageOptions = useMemo(
+    () => villages.map((v) => ({ village: v.village, totalChildren: v.totalChildren })),
+    [villages]
+  );
 
   const handleLogout = () => {
     localStorage.removeItem("balsaathi_user");
@@ -196,9 +214,9 @@ export default function BdoDashboardPage() {
               </div>
 
               <button
-                onClick={() => fetchDashboardData(selectedBlockId)}
+                onClick={handleRefresh}
                 className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
-                title="Refresh from Database"
+                title="Refresh from Database (Clears Cache)"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               </button>
@@ -245,7 +263,7 @@ export default function BdoDashboardPage() {
                     <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                       <span>Village-Wise Stacked Distribution &amp; Immunisation Meter</span>
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700">
-                        {villages.filter((v) => v.totalChildren > 0).length} Active Villages
+                        {activeVillages.length} Active Villages
                       </span>
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -294,7 +312,7 @@ export default function BdoDashboardPage() {
               villageName={selectedVillage}
               talukaName={activeBlockName}
               blockId={selectedBlockId}
-              allVillages={villages.map((v) => ({ village: v.village, totalChildren: v.totalChildren }))}
+              allVillages={villageOptions}
               onSelectVillage={handleVillageSelect}
               onClearVillageFilter={handleClearVillageFilter}
             />
@@ -309,24 +327,22 @@ export default function BdoDashboardPage() {
               Select any village below or click a bar on the chart above to load its individual child growth registry and Z-score assessments:
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-3xl mx-auto">
-              {villages
-                .filter((v) => v.totalChildren > 0)
-                .map((v) => (
-                  <button
-                    key={v.village}
-                    type="button"
-                    onClick={() => handleVillageSelect(v.village)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span>{v.village}</span>
-                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-md font-mono">
-                      {v.totalChildren}
-                    </span>
-                    {v.samCount > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-rose-500" title={`${v.samCount} SAM Hotspots`} />
-                    )}
-                  </button>
-                ))}
+              {activeVillages.map((v) => (
+                <button
+                  key={v.village}
+                  type="button"
+                  onClick={() => handleVillageSelect(v.village)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span>{v.village}</span>
+                  <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-md font-mono">
+                    {v.totalChildren}
+                  </span>
+                  {v.samCount > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-rose-500" title={`${v.samCount} SAM Hotspots`} />
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         )}

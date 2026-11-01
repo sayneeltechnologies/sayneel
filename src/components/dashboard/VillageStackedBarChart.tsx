@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -69,41 +69,60 @@ export default function VillageStackedBarChart({
     setIsMounted(true);
   }, []);
 
-  // Filter villages with registered children
-  const displayedVillages = villages.filter((v) => v.totalChildren > 0);
+  // Senior Dev Optimization: Single O(N) pass to filter active villages, transform chart data,
+  // and compute severe hotspots, memoized to preserve object references and prevent Recharts re-render thrashing.
+  const { displayedVillages, chartData, totalSevere } = useMemo(() => {
+    const displayed: VillageSummary[] = [];
+    const chart: Array<{
+      name: string;
+      village: string;
+      sector: string;
+      total: number;
+      normal: number;
+      moderate: number;
+      severe: number;
+    }> = [];
+    let severeSum = 0;
 
-  // Format data based on activeDimension with clean, un-truncated full village names
-  const chartData = displayedVillages.map((v) => {
-    let normal = v.normalCount;
-    let moderate = v.mamCount;
-    let severe = v.samCount;
+    for (let i = 0; i < villages.length; i++) {
+      const v = villages[i];
+      if (v.totalChildren <= 0) continue;
 
-    if (activeDimension === "waz") {
-      normal = v.wazNormal;
-      moderate = v.wazModerate;
-      severe = v.wazSevere;
-    } else if (activeDimension === "whz") {
-      normal = v.whzNormal;
-      moderate = v.whzModerate;
-      severe = v.whzSevere;
-    } else if (activeDimension === "haz") {
-      normal = v.hazNormal;
-      moderate = v.hazModerate;
-      severe = v.hazSevere;
+      displayed.push(v);
+
+      let normal = v.normalCount;
+      let moderate = v.mamCount;
+      let severe = v.samCount;
+
+      if (activeDimension === "waz") {
+        normal = v.wazNormal;
+        moderate = v.wazModerate;
+        severe = v.wazSevere;
+      } else if (activeDimension === "whz") {
+        normal = v.whzNormal;
+        moderate = v.whzModerate;
+        severe = v.whzSevere;
+      } else if (activeDimension === "haz") {
+        normal = v.hazNormal;
+        moderate = v.hazModerate;
+        severe = v.hazSevere;
+      }
+
+      severeSum += severe;
+
+      chart.push({
+        name: v.village,
+        village: v.village,
+        sector: v.sector,
+        total: v.totalChildren,
+        normal,
+        moderate,
+        severe,
+      });
     }
 
-    return {
-      name: v.village, // Complete, un-truncated full village name!
-      village: v.village,
-      sector: v.sector,
-      total: v.totalChildren,
-      normal,
-      moderate,
-      severe,
-    };
-  });
-
-  const totalSevere = chartData.reduce((acc, c) => acc + c.severe, 0);
+    return { displayedVillages: displayed, chartData: chart, totalSevere: severeSum };
+  }, [villages, activeDimension]);
 
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between h-full">
